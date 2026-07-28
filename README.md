@@ -1,4 +1,4 @@
-# BinX Backend Internship
+# BinX Tech Backend Internship
 
 ## About This Repository
 
