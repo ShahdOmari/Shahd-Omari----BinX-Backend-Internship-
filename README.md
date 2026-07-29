@@ -11,7 +11,7 @@ The goal of this repo is not just to store code, but to track a clear learning p
 - Object-Oriented Programming (OOP) principles
 - Collections & LINQ
 - async/await
-- Git & GitHub workflow (feature branches, commits, pull requests)
+- Git & GitHub workflow (commits, feature branches, pull requests)
 - (Future weeks will expand this list as the internship progresses)
 
 **Tools used:**
@@ -72,6 +72,8 @@ git push -u origin feature/weekX-dayY-topic
 
 Then a Pull Request is opened on GitHub from the feature branch into `main`, describing exactly what was added.
 
+> **Note:** Days 1–4 of Week 1 were committed directly to `main` while I was still getting comfortable with the basic Git commands. Starting with Day 5, I'm applying the full feature-branch → pull request workflow described above, and will follow it for every day/task going forward.
+
 ---
 
 ## Week 1 — Onboarding, C# Fundamentals & Git
@@ -97,34 +99,35 @@ Set up a professional .NET development environment and build the core C# fundame
 - Set up VS Code with the C# Dev Kit extension (IntelliSense + debugger configured)
 - Created, built, and ran a first console app (`HelloBinX`) with `dotnet new console` and `dotnet run`
 - Created a GitHub account and the internship repository
-- *What I learned:* if the environment isn't set up correctly, everything afterward becomes harder — so this step matters more than it looks.
+- *What I learned:* If the environment isn't set up correctly, everything afterward becomes harder — verifying the SDK and running a simple "Hello World" before moving on saved me from debugging environment issues later in the week.
 
 **Day 2 — C# Fundamentals I: Types, Variables & Control Flow**
 - Explored the difference between value types (e.g. `int`, `struct`) and reference types (e.g. `class`, arrays, strings), including copy-by-value vs. copy-by-reference behavior
 - Practiced variables, type inference (`var`), and idiomatic naming
 - Practiced modern control flow: `switch` expressions and loops (`for`, `foreach`, `while`)
 - Learned about nullable reference types (`string?` vs `string`) and why they catch null-reference bugs at compile time instead of at runtime
-- *What I learned:* [fill in after completing the day — key takeaway in your own words]
+- *What I learned:* The value vs. reference type distinction is the one thing I'll need to keep in mind constantly going forward. Testing it directly made it concrete: mutating a reference type (like an array) through one variable affected every other variable pointing to it, while a value type copy stayed completely independent. Strings behave like reference types but *act* immutable, which was the trickiest part to internalize.
 
 **Day 3 — C# Fundamentals II: Object-Oriented Programming**
 - Compared `class`, `record`, and `struct`, and when each one makes sense (identity vs. immutable data vs. small value data)
 - Applied encapsulation: private backing fields, public properties, and constructors that enforce valid state
 - Studied inheritance vs. interfaces, and why favoring interfaces over deep inheritance chains is usually more flexible and testable
-- Modeled a small domain with polymorphism, setting up the foundation for Dependency Injection (covered in Week 2)
-- *What I learned:* [fill in after completing the day]
+- Modeled a small domain (a task tracker with `TaskItem` and `Project`) with polymorphism via an `ILoggable` interface, setting up the foundation for Dependency Injection (covered in Week 2)
+- *What I learned:* The "IS-A vs. CAN-DO" rule of thumb made the inheritance-vs-interface decision much clearer. `TaskItem` and `Project` have no real inheritance relationship, but both needed the same logging capability — that's exactly the case an interface is for, and writing one method (`PrintLog`) that worked with both was the first time polymorphism felt genuinely useful rather than theoretical.
 
 **Day 4 — C# Fundamentals III: Collections & LINQ Basics**
 - Compared `List<T>`, `Dictionary<TKey, TValue>`, and `HashSet<T>`, and when each collection fits the access pattern
 - Practiced LINQ using method syntax (filter, projection, aggregation) — the style most commonly used in real projects
 - Wrote an `async`/`await` method simulating an I/O delay, since this becomes the foundation for every database call going forward
-- Practiced exception handling: catching specific exception types meaningfully instead of a blanket `catch (Exception)`
-- *What I learned:* [fill in after completing the day]
+- Practiced exception handling: catching specific exception types (`FormatException`, `OverflowException`) meaningfully instead of a blanket `catch (Exception)`
+- *What I learned:* Chaining `.Where()`, `.OrderBy()`, and `.Select()` made it obvious why LINQ is preferred over manual loops — the intent of each query is readable at a glance. Testing the `try/catch` with actual invalid input (not just correct input) was what made exception handling click, since I could see the specific exception type get caught instead of the program crashing.
 
 **Day 5 — Git & GitHub Workflow; Week 1 Synthesis**
-- Practiced the full workflow: `git init`, `.gitignore`, commits, remote setup, feature branches, and pull requests
-- Learned to write clear, descriptive commit messages in imperative mood instead of vague ones like "update"
-- Opened a pull request from a feature branch into `main` with a clear description, and requested the mentor as reviewer
-- Put together a Week 1 summary in Notion (environment setup notes, exercises, and a link to the pull request) for the mentor check-in
+- *Status: in progress*
+- Practicing the full workflow: `.gitignore`, remote setup, feature branches, and pull requests
+- Learning to write clear, descriptive commit messages in imperative mood instead of vague ones like "update"
+- Opening a pull request from a feature branch into `main` with a clear description, and requesting the mentor as reviewer
+- Putting together a Week 1 summary in Notion (environment setup notes, exercises, and a link to the pull request) for the mentor check-in
 - *What I learned:* [fill in after completing the day]
 
 ### Week 1 Deliverables
@@ -136,7 +139,7 @@ Set up a professional .NET development environment and build the core C# fundame
 - A Week 1 summary document in Notion, ready for the mentor check-in
 
 ### Week 1 Outcome
-By the end of this week, the development environment was fully functional (.NET SDK, VS Code, C# Dev Kit, Git, GitHub), and I had hands-on practice with core C# concepts and a real Git feature-branch workflow — both of which are used throughout the rest of the program, starting with ASP.NET Core in Week 2.
+*To be completed once Day 5 is finished.*
 
 ---
 
