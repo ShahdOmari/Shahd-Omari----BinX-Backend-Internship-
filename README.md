@@ -20,6 +20,10 @@ The goal of this repo is not just to store code, but to track a clear learning p
 - Git / GitHub
 - Notion (weekly summaries and program tracker)
 
+**📓 Notion Workspace:**  
+https://app.notion.com/p/BinX-Tech-Backend-Internship-3acf35c1957c80109d04e98eb418ed12?source=copy_link
+ full program tracker with weekly and daily breakdowns.
+
 ---
 
 ## Repository Structure
@@ -138,6 +142,7 @@ Set up a professional .NET development environment and build the core C# fundame
 - A GitHub repository with a feature branch, clear commit history, and an opened pull request
 - A Week 1 summary document in Notion, ready for the mentor check-in
 
+**🔗 Pull Request: https://app.notion.com/p/BinX-Tech-Backend-Internship-3acf35c1957c80109d04e98eb418ed12?source=copy_link
 ### Week 1 Outcome
 *To be completed once Day 5 is finished.*
 
