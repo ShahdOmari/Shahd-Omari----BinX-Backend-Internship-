@@ -21,8 +21,10 @@ The goal of this repo is not just to store code, but to track a clear learning p
 - Git / GitHub
 - Notion (weekly summaries and program tracker)
 
-**📓 Notion Workspace:**  https://app.notion.com/p/BinX-Tech-Backend-Internship-3acf35c1957c80109d04e98eb418ed12?source=copy_link
+**📓 Notion Workspace:**  
+https://app.notion.com/p/BinX-Tech-Backend-Internship-3acf35c1957c80109d04e98eb418ed12?source=copy_link
  full program tracker with weekly and daily breakdowns.
+
 ---
 
 ## Repository Structure
@@ -148,6 +150,7 @@ Set up a professional .NET development environment and build the core C# fundame
 - A GitHub repository with a feature branch, clear commit history, and an opened pull request
 - A Week 1 summary document in Notion, ready for the mentor check-in
 
+**🔗 Pull Request: https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/pull/1
 ### Week 1 Outcome
 By the end of this week, the development environment was fully functional (.NET SDK, VS Code, C# Dev Kit, Git, GitHub), and I had hands-on practice with core C# concepts — value vs. reference types, OOP with encapsulation and interfaces, collections, LINQ, and async/await — along with a real Git feature-branch and Pull Request workflow. Both the C# fundamentals and the Git workflow carry forward directly into Week 2.
 
