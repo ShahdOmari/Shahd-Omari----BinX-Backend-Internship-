@@ -29,9 +29,9 @@ happy path.
 ## Day-by-Day
 
 | Day | Topic | Status |
-|---|---|---|
+|---|---|---|:ض
 | [Day 1](Day1-RestApiDesign/README.md) | REST API Design & Resource Modeling | ✅ Complete |
-| [Day 2](Day2-SchemaDesign/README.md) | SQL Server Schema Design & Normalization | ⏳ Pending |
+| [Day 2](Day2-SchemaDesign/README.md) | SQL Server Schema Design & Normalization | ✅ Complete |
 | [Day 3](Day3-EfCoreMigrations/README.md) | EF Core Setup & Code-First Migrations | ⏳ Pending |
 | [Day 4](Day4-CrudOperations/README.md) | Implementing CRUD Operations with EF Core | ⏳ Pending |
 | [Day 5](Day5-PostmanTesting/README.md) | Testing & Documenting the API with Postman | ⏳ Pending |
