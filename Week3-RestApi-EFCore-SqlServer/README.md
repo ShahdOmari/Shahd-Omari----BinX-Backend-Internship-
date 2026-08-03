@@ -29,7 +29,7 @@ happy path.
 ## Day-by-Day
 
 | Day | Topic | Status |
-|---|---|---|:ض
+|---|---|---|:
 | [Day 1](Day1-RestApiDesign/README.md) | REST API Design & Resource Modeling | ✅ Complete |
 | [Day 2](Day2-SchemaDesign/README.md) | SQL Server Schema Design & Normalization | ✅ Complete |
 | [Day 3](Day3-EfCoreMigrations/README.md) | EF Core Setup & Code-First Migrations | ⏳ Pending |
