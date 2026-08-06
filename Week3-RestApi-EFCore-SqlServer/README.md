@@ -34,7 +34,7 @@ happy path.
 | [Day 2](Day2-SchemaDesign/README.md) | SQL Server Schema Design & Normalization | ✅ Complete |
 | [Day 3](Day3-EfCoreMigrations/README.md) | EF Core Setup & Code-First Migrations | ✅ Complete 
 | [Day 4](Day4-CrudOperations/README.md) | Implementing CRUD Operations with EF Core | ✅ Complete |
-| [Day 5](Day5-PostmanTesting/README.md) | Testing & Documenting the API with Postman | ⏳ Pending |
+| [Day 5](Day5-PostmanTesting/README.md) | Testing & Documenting the API with Postman | ✅ Complete |
 
 ## Week 3 Deliverables
 
