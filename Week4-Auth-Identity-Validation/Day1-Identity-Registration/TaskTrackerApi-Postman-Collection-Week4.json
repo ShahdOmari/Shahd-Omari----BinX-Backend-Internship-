@@ -1,0 +1,327 @@
+{
+  "info": {
+    "_postman_id": "0b13c859-ba9f-4960-8fbd-917e5eee47d6",
+    "name": "TaskTracker API - Week 4",
+    "description": "# TaskTracker API — Week 4: Authentication & Identity\n\n## Overview\n\nThis collection tests the authentication and identity layer added in  \nWeek 4, built on top of the Week 3 CRUD API.\n\n## Base URL\n\nAll requests use the `{{baseUrl}}` variable, set in the  \n`Local Development` environment to `http://localhost:5264`.\n\n## Authentication\n\n- Day 1: User registration (no auth required)\n    \n- Day 2+: Login issues a JWT; protected endpoints require this token  \n    as a Bearer token in the Authorization header\n    \n\n## Folder Structure\n\n- **Auth** — registration, login, and token-related endpoints\n    \n- **Tasks** — CRUD endpoints from Week 3, now behind authentication  \n    (added Day 2 onward)\n    \n\n## How to Run\n\n1. Start the API: `dotnet run` from `TaskTrackerApi/`\n    \n2. Select the `Local Development` environment (top-right dropdown)\n    \n3. Run requests in numerical order within each folder — later  \n    requests depend on data created by earlier ones",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54406292",
+    "_collection_link": "https://go.postman.co/collection/54406292-0b13c859-ba9f-4960-8fbd-917e5eee47d6?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "01 - Register (Valid) → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains a userId\", () => {\r",
+                  "    pm.expect(pm.response.json()).to.have.property(\"userId\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains success message\", () => {\r",
+                  "    pm.expect(pm.response.json().message).to.eql(\"User registered successfully.\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"shahd.week4@binx.com\",\r\n  \"password\": \"SecureP@ss123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "### Purpose\n\nRegisters a new user with a valid email and a password meeting  \nIdentity's default policy (6+ chars, upper, lower, non-alphanumeric).\n\n### Expected Response\n\n`200 OK`\n\n``` json\n{\n  \"message\": \"User registered successfully.\",\n  \"userId\": \"<generated-guid>\"\n}\n\n ```\n\n### Notes\n\nThe password is hashed by Identity's UserManager before storage —  \nnever stored or returned in plaintext."
+          },
+          "response": [
+            {
+              "name": "Success Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"shahd.week4@binx.com\",\r\n  \"password\": \"SecureP@ss123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Date",
+                  "value": "Mon, 10 Aug 2026 19:10:53 GMT"
+                },
+                {
+                  "key": "Server",
+                  "value": "Kestrel"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"User registered successfully.\",\n    \"userId\": \"44665570-c19b-437f-b073-9e829ea3f905\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "02 - Register (Weak Password) → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => {\r",
+                  "    pm.response.to.have.status(400);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains errors array\", () => {\r",
+                  "    pm.expect(pm.response.json()).to.have.property(\"errors\");\r",
+                  "    pm.expect(pm.response.json().errors).to.be.an(\"array\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Errors mention password requirements\", () => {\r",
+                  "    const errors = pm.response.json().errors.join(\" \");\r",
+                  "    pm.expect(errors).to.include(\"Passwords must\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"test@binx.com\",\r\n  \"password\": \"123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "### Purpose\n\nConfirms Identity's password policy is enforced and returns specific,  \nactionable error messages — not a generic \"invalid input\" response.\n\n### Expected Response\n\n`400 Bad Request`\n\n``` json\n{\n  \"errors\": [\n    \"Passwords must be at least 6 characters.\",\n    \"Passwords must have at least one non alphanumeric character.\",\n    \"Passwords must have at least one lowercase ('a'-'z').\",\n    \"Passwords must have at least one uppercase ('A'-'Z').\"\n  ]\n}\n\n ```"
+          },
+          "response": [
+            {
+              "name": "Weak Password Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"test@binx.com\",\r\n  \"password\": \"123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Date",
+                  "value": "Mon, 10 Aug 2026 19:12:31 GMT"
+                },
+                {
+                  "key": "Server",
+                  "value": "Kestrel"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"errors\": [\n        \"Passwords must be at least 6 characters.\",\n        \"Passwords must have at least one non alphanumeric character.\",\n        \"Passwords must have at least one lowercase ('a'-'z').\",\n        \"Passwords must have at least one uppercase ('A'-'Z').\"\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "03 - Register (Duplicate Email) → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => {\r",
+                  "    pm.response.to.have.status(400);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"shahd.week4@binx.com\",\r\n  \"password\": \"AnotherP@ss123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "### Purpose\n\nConfirms duplicate email registration is rejected — a realistic  \nerror case beyond just password validation.\n\n### Expected Response\n\n`400 Bad Request` with an error mentioning the email is already taken."
+          },
+          "response": [
+            {
+              "name": "Duplicate Email example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"shahd.week4@binx.com\",\r\n  \"password\": \"AnotherP@ss123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Date",
+                  "value": "Mon, 10 Aug 2026 19:13:05 GMT"
+                },
+                {
+                  "key": "Server",
+                  "value": "Kestrel"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"errors\": [\n        \"Username 'shahd.week4@binx.com' is already taken.\"\n    ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Endpoints for user registration and (starting Day 2) login/token  \nissuance. No authentication required for these endpoints themselves  \n— they're what issues the credentials used everywhere else."
+    }
+  ]
+}

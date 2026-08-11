@@ -1,3 +1,16 @@
-bin/
-obj/
-.vs/
+# Build outputs
+**/bin/
+**/obj/
+
+# Visual Studio
+**/.vs/
+
+# User-specific files
+*.user
+
+# Local secrets (never commit real credentials)
+appsettings.Development.json
+
+# OS files
+.DS_Store
+Thumbs.db
