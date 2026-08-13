@@ -1,0 +1,238 @@
+{
+  "info": {
+    "_postman_id": "bc8cf917-d9cd-4c2c-ab62-f90a1ca034f3",
+    "name": "TaskTracker API - Week 4 Day2 -JWT Authentication",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54406292",
+    "_collection_link": "https://go.postman.co/collection/54406292-bc8cf917-d9cd-4c2c-ab62-f90a1ca034f3?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Day 2 - JWT Authentication",
+      "item": [
+        {
+          "name": "01 - Login (Valid) → 200 + Save Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains a token\", () => {\r",
+                  "    pm.expect(pm.response.json()).to.have.property(\"token\");\r",
+                  "});\r",
+                  "\r",
+                  "// Automatically save the token as a collection variable, so every\r",
+                  "// subsequent protected request can use {{authToken}} without manual\r",
+                  "// copy-pasting — this is what makes the whole collection re-runnable\r",
+                  "// end-to-end with one click.\r",
+                  "const token = pm.response.json().token;\r",
+                  "pm.collectionVariables.set(\"authToken\", token);\r",
+                  "\r",
+                  "// Decoding the JWT payload directly in the test script (not just\r",
+                  "// trusting the token exists) to verify the claims are actually\r",
+                  "// correct — catching a bug where the token has the right shape but\r",
+                  "// wrong data would be missed by a simple \"has property\" check.\r",
+                  "pm.test(\"Token payload contains correct claims\", () => {\r",
+                  "    const payloadBase64 = token.split('.')[1];\r",
+                  "    const payload = JSON.parse(atob(payloadBase64));\r",
+                  "\r",
+                  "    pm.expect(payload).to.have.property(\"sub\");\r",
+                  "    pm.expect(payload.email).to.eql(\"shahd.week4@binx.com\");\r",
+                  "    pm.expect(payload.iss).to.eql(\"TaskTrackerApi\");\r",
+                  "    pm.expect(payload.aud).to.eql(\"TaskTrackerApiUsers\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Token expiry is in the future\", () => {\r",
+                  "    const payloadBase64 = token.split('.')[1];\r",
+                  "    const payload = JSON.parse(atob(payloadBase64));\r",
+                  "    const expiryDate = new Date(payload.exp * 1000);\r",
+                  "    pm.expect(expiryDate.getTime()).to.be.above(Date.now());\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"shahd.week4@binx.com\",\r\n  \"password\": \"SecureP@ss123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02 - Login (Wrong Password) → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", () => {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Does not reveal whether email exists (generic message)\", () => {\r",
+                  "    const body = pm.response.json();\r",
+                  "    pm.expect(body.message).to.eql(\"Invalid email or password.\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"shahd.week4@binx.com\",\r\n  \"password\": \"WrongPassword123!\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03 - Access Protected Endpoint (With Valid Token) → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response confirms authentication\", () => {\r",
+                  "    pm.expect(pm.response.json().message).to.include(\"authenticated\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{authToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/test/protected",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "test",
+                "protected"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04 - Access Protected Endpoint (No Token) → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401 (not 500)\", () => {\r",
+                  "    // This specifically checks the middleware ordering lesson from\r",
+                  "    // Week 2: a protected endpoint returning 500 instead of 401 for a\r",
+                  "    // missing token usually means auth middleware isn't registered or\r",
+                  "    // ordered correctly.\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/test/protected",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "test",
+                "protected"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05 - Access Protected Endpoint (Invalid/Tampered Token) → 401",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ],
+      "description": "# Day 2 — JWT Authentication & Token Issuance\n\n## Overview\n\nTests JWT-based login and protected route access, building on Day 1's  \nregistration endpoint. Demonstrates token issuance, claims validation,  \nand rejection of missing/invalid/tampered tokens.\n\n## Base URL\n\n`{{baseUrl}}` — set in the `Local Development` environment.\n\n## Prerequisites\n\nA user must already be registered (see Day 1's collection) before  \nrunning Login requests here. Update the email/password in Request 01  \nto match a real registered user if needed.\n\n## What Makes This Collection Different\n\nBeyond basic status code checks, this collection:\n\n- Decodes the JWT payload directly in test scripts to verify claims  \n    are actually correct, not just present\n    \n- Automatically saves the issued token as a collection variable  \n    (`authToken`) so protected requests chain without manual copying\n    \n- Tests a security principle (generic error messages that don't leak  \n    whether an email exists) rather than just the status code\n    \n- Tests a deliberately tampered token to confirm signature validation  \n    actually rejects forged tokens, not just missing ones\n    \n\n## How to Run\n\n1. Start the API: `dotnet run` from `TaskTrackerApi/`\n    \n2. Select the `Local Development` environment\n    \n3. Run requests 01 → 05 in order"
+    }
+  ]
+}
