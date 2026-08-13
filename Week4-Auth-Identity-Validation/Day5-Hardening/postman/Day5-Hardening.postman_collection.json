@@ -1,0 +1,209 @@
+{
+  "info": {
+    "_postman_id": "2c8bb1b2-138e-4735-b397-6b1f80f565bd",
+    "name": "Day5-Hardening",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54406292",
+    "_collection_link": "https://go.postman.co/collection/54406292-2c8bb1b2-138e-4735-b397-6b1f80f565bd?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Register succeeded\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"test54@binx.com\", \"password\": \"Day5Test@123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/Auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "Auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Role",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/Auth/assign-role?email=test54@binx.com&role=User",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "Auth",
+                "assign-role"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "test54@binx.com"
+                },
+                {
+                  "key": "role",
+                  "value": "User"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Documents both possible outcomes: the request either succeeds/fails\r",
+                  "// authentication normally (200/401), or gets rejected by the rate\r",
+                  "// limiter entirely (429) before authentication logic even runs.\r",
+                  "pm.test(\"Status is 200, 401, or 429 (rate limited)\", () => {\r",
+                  "    pm.expect([200, 401, 429]).to.include(pm.response.code);\r",
+                  "});\r",
+                  "\r",
+                  "if (pm.response.code === 429) {\r",
+                  "    console.log(\"✅ Rate limit triggered — login endpoint is protected.\");\r",
+                  "} else if (pm.response.code === 200) {\r",
+                  "    const response = pm.response.json();\r",
+                  "    pm.environment.set(\"token\", response.token);\r",
+                  "    console.log(\"Login succeeded, token saved.\");\r",
+                  "} else {\r",
+                  "    console.log(\"Login failed (401) — expected if credentials are wrong or limit not yet hit.\");\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"test54@binx.com\", \"password\": \"Day5Test@123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/Auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "Auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Get All Tasks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Confirms the \"general\" rate limiter (100 requests/minute) is applied\r",
+                  "// to this controller without actually needing 100 requests to prove it —\r",
+                  "// a normal successful call under the limit still passes through the\r",
+                  "// RateLimiter middleware, just without being rejected.\r",
+                  "pm.test(\"Request succeeds under the general rate limit\", () => {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/Tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "Tasks"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

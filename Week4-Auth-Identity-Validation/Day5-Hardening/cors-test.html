@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html>
+<html>
+<body>
+<h3>CORS Test</h3>
+<pre id="result">Testing...</pre>
+<script>
+fetch("http://localhost:5264/api/v1/Tasks", { method: "GET" })
+  .then(r => document.getElementById("result").innerText = "Status: " + r.status)
+  .catch(e => document.getElementById("result").innerText = "BLOCKED BY CORS: " + e.message);
+</script>
+</body>
+</html>
