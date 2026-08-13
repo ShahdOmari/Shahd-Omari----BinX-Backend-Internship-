@@ -30,7 +30,7 @@ limiting, CORS, and security headers.
 | [Day 1](Day1-Identity-Registration/README.md) | ASP.NET Core Identity & User Registration | ✅ Complete |
 | [Day 2](Day2-JWT-Auth/README.md) | JWT Authentication & Token Issuance | ✅ Complete |
 | [Day 3](Day3-Authorization-Roles/README.md) | Protecting Routes & Role-Based Access Control | ✅ Complete |
-| [Day 4](Day4-FluentValidation/README.md) | Input Validation with FluentValidation | ⏳ Pending |
+| [Day 4](Day4-FluentValidation/README.md) | Input Validation with FluentValidation | ✅ Complete |
 | [Day 5](Day5-Hardening/README.md) | Rate Limiting, CORS & Security Headers | ⏳ Pending |
 
 Each day's folder has its own README with the specific exercises,
