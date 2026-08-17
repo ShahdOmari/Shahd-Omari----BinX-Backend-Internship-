@@ -1,0 +1,152 @@
+﻿using System.Text;
+using CardiacMonitoring.Api.Data;
+using CardiacMonitoring.Api.Repositories;
+using CardiacMonitoring.Api.Services;
+using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter()));
+
+// ---- Database ----
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ---- Identity ----
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+    {
+        options.Password.RequiredLength = 8;
+    })
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+// ---- JWT Authentication ----
+var jwtKey = builder.Configuration["Jwt:Key"]!;
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// ---- Application services ----
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IRiskEvaluator, CardiacRiskEvaluator>(); 
+builder.Services.AddScoped<IVitalSignService, VitalSignService>();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+// ---- CORS ----
+// A named policy allowing only a specific known frontend origin — a
+// permissive "allow any origin" policy is convenient in development but
+// should never ship to production, since it lets any website's script
+// call this API on a logged-in user's behalf.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("https://cardiac-frontend.com")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+// ---- Rate Limiting ----
+// A stricter limiter on login specifically, since repeated rapid login
+// attempts are the clearest sign of a brute-force attack in progress.
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("general", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+    });
+
+    options.AddFixedWindowLimiter("login", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer' followed by a space and your JWT token."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+else
+{
+    // HSTS tells browsers to always use HTTPS for this domain going
+    // forward. Only enabled outside Development, since it would otherwise
+    // block local HTTP testing in the browser.
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+// Order matters: CORS and rate limiting run before authentication/
+// authorization, so a disallowed origin or a rate-limited client is
+// rejected before the request ever reaches an identity check.
+app.UseCors("AllowFrontend");
+app.UseRateLimiter();
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
