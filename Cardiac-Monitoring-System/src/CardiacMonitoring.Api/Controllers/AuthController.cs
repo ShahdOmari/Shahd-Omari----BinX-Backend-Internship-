@@ -13,7 +13,6 @@ namespace CardiacMonitoring.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-[Authorize]
 [EnableRateLimiting("general")]
 public class AuthController : ControllerBase
 {

@@ -149,4 +149,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+app.Run(); 
+
+// Exposed as public so WebApplicationFactory<Program> in the test project
+// can reference this entry point — top-level statement Program classes
+// are internal by default.
+public partial class Program { }
