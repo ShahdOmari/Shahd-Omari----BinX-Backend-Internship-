@@ -21,7 +21,7 @@ at the repo root) — the same project this week's testing work is applied direc
 | [Day 1](./Day1-XUnit-Unit-Testing) | Project selection + xUnit unit testing | ✅ Complete — 10/10 tests |
 | [Day 2](./Day2-Mocking-With-Moq) | Mocking dependencies with Moq | ✅ Complete — 13/13 tests |
 | [Day 3](./Day3-Integration-Testing-WebApplicationFactory) | Integration testing with WebApplicationFactory | ✅ Complete — 19/19 tests |
-| Day 4 | Centralized error handling & global exception middleware | ⬜ In progress |
+| [Day 4](./Day4-Global-Exception-Handling) | Centralized error handling & global exception middleware | ✅ Complete — 19/19 tests still passing |
 | Day 5 | Applying testing to the project; Week 5 synthesis | ⬜ Not started |
 
 ## Structure Note
