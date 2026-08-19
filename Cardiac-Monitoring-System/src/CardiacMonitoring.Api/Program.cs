@@ -8,7 +8,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Models; 
+using CardiacMonitoring.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +57,13 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IRiskEvaluator, CardiacRiskEvaluator>(); 
 builder.Services.AddScoped<IVitalSignService, VitalSignService>();
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>(); 
+
+// Registers the global exception handler and ASP.NET Core's built-in
+// ProblemDetails service (which also standardizes automatic responses
+// like model-validation failures into the same RFC 7807 shape).
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 // ---- CORS ----
 // A named policy allowing only a specific known frontend origin — a
@@ -122,7 +129,11 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var app = builder.Build();
+var app = builder.Build();   
+// Must be registered first in the pipeline — it needs to wrap everything
+// downstream (Swagger, CORS, rate limiting, auth, controllers) to catch
+// an unhandled exception no matter which stage it happens in.
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
