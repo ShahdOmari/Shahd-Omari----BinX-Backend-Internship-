@@ -22,7 +22,7 @@ at the repo root) — the same project this week's testing work is applied direc
 | [Day 2](./Day2-Mocking-With-Moq) | Mocking dependencies with Moq | ✅ Complete — 13/13 tests |
 | [Day 3](./Day3-Integration-Testing-WebApplicationFactory) | Integration testing with WebApplicationFactory | ✅ Complete — 19/19 tests |
 | [Day 4](./Day4-Global-Exception-Handling) | Centralized error handling & global exception middleware | ✅ Complete — 19/19 tests still passing |
-| Day 5 | Applying testing to the project; Week 5 synthesis | ⬜ Not started |
+| [Day 5](./Day5-Applying-Testing-Project-Synthesis) | Risk-based testing + Week 5 synthesis | ✅ Complete — 24/24 tests passing |
 
 ## Structure Note
 
@@ -48,6 +48,8 @@ dotnet test
 | Day 1 | 10 | Unit tests for `CardiacRiskEvaluator` |
 | Day 2 | 13 | Moq tests for `VitalSignService` (after extracting it from the controller) |
 | Day 3 | 19 | Integration tests via `WebApplicationFactory` + SQLite in-memory |
+| Day 4 | 19 | Centralized error handling & global exception middleware         |
+| Day 5 | 24 | Role-based access control tests + async business-rule validation tests |
 
 ## Real Bug Caught This Week
 
