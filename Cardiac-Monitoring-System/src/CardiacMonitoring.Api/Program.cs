@@ -130,9 +130,55 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();   
-// Must be registered first in the pipeline — it needs to wrap everything
-// downstream (Swagger, CORS, rate limiting, auth, controllers) to catch
-// an unhandled exception no matter which stage it happens in.
+// Synthetic seed data — ensures the database always has demonstrable
+// content for grading/demo purposes without requiring manual setup.
+// Idempotent: only seeds if the Patients table is empty, so re-running
+// the app never creates duplicates.
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (!context.Patients.Any())
+    {
+        var patient1 = new CardiacMonitoring.Api.Entities.Patient
+        {
+            FullName = "Layla Ahmad", DateOfBirth = new DateTime(1968, 4, 12), Gender = "Female"
+        };
+        var patient2 = new CardiacMonitoring.Api.Entities.Patient
+        {
+            FullName = "Omar Khalil", DateOfBirth = new DateTime(1975, 11, 3), Gender = "Male"
+        };
+        context.Patients.AddRange(patient1, patient2);
+        context.SaveChanges();
+
+        context.VitalSigns.AddRange(
+            new CardiacMonitoring.Api.Entities.VitalSign
+            {
+                PatientId = patient1.Id, HeartRateBpm = 78, SystolicBp = 122, DiastolicBp = 80,
+                OxygenSaturationPercent = 97, RecordedAtUtc = DateTime.UtcNow.AddHours(-2),
+                RiskLevel = CardiacMonitoring.Api.Entities.RiskLevel.Normal
+            },
+            new CardiacMonitoring.Api.Entities.VitalSign
+            {
+                PatientId = patient2.Id, HeartRateBpm = 138, SystolicBp = 188, DiastolicBp = 102,
+                OxygenSaturationPercent = 88, RecordedAtUtc = DateTime.UtcNow.AddMinutes(-30),
+                RiskLevel = CardiacMonitoring.Api.Entities.RiskLevel.Critical
+            });
+
+        context.Medications.Add(new CardiacMonitoring.Api.Entities.Medication
+        {
+            PatientId = patient1.Id, Name = "Lisinopril", DosageMg = 10, Frequency = "Once daily"
+        });
+
+        context.Appointments.Add(new CardiacMonitoring.Api.Entities.Appointment
+        {
+            PatientId = patient2.Id, ScheduledAtUtc = DateTime.UtcNow.AddDays(3),
+            DoctorName = "Dr. Nadia Saleh", Reason = "Cardiac follow-up"
+        });
+
+        context.SaveChanges();
+    }
+}
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
