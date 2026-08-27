@@ -18,9 +18,9 @@ Review (Day 4) → Sprint Review & Retrospective (Day 5).
 |---|---|---|
 | [Day1](./Day1) | Sprint 1 planning, backlog, and finalized ERD | ✅ Complete |
 | [Day2](./Day2) | EF Core Fluent API relationships, seed data, migration | ✅ Complete |
-| [Day3](./Day3) | Core routes I — catalog/read operations | ⬜ |
-| [Day4](./Day4) | Core routes II — write operations, business logic, code review | ⬜ |
-| [Day5](./Day5) | Sprint Review, Postman demo, Retrospective | ⬜ |
+| [Day3](./Day3) | Core routes I — catalog/read operations | ✅ Complete |
+| [Day4](./Day4) | Core routes II — write operations, business logic, code review | ✅ Complete |
+| [Day5](./Day5) | Sprint Review, Postman demo, Retrospective | ✅ Complete |
 
 ## Structure Note
 
