@@ -1,85 +1,98 @@
-﻿using CardiacMonitoring.Api.DTOs.VitalSigns;
+﻿using CardiacMonitoring.Api.Data;
+using CardiacMonitoring.Api.DTOs.VitalSigns;
 using CardiacMonitoring.Api.Entities;
 using CardiacMonitoring.Api.Repositories;
 using CardiacMonitoring.Api.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
 namespace CardiacMonitoring.Tests.Services;
 
-public class VitalSignServiceTests
+// VitalSignService now needs a transaction (Database.BeginTransactionAsync),
+// which only works against a real DbContext/connection — not something Moq
+// can fake. A lightweight SQLite in-memory AppDbContext is used here instead,
+// while IRiskEvaluator stays mocked, since that part genuinely has no
+// database dependency and isolating it is still valuable.
+public class VitalSignServiceTests : IDisposable
 {
-    private readonly Mock<IRepository<VitalSign>> _repositoryMock = new();
+    private readonly SqliteConnection _connection;
+    private readonly AppDbContext _context;
     private readonly Mock<IRiskEvaluator> _riskEvaluatorMock = new();
     private readonly VitalSignService _service;
 
     public VitalSignServiceTests()
     {
-        // The service under test never touches a real repository or a real
-        // risk evaluator — both dependencies are replaced with mocks, so
-        // this test is purely about VitalSignService's own coordination
-        // logic, not the database or the scoring rules themselves (those
-        // already have their own dedicated tests from Day 1).
-        _service = new VitalSignService(_repositoryMock.Object, _riskEvaluatorMock.Object);
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _context = new AppDbContext(options);
+        _context.Database.EnsureCreated();
+
+        var vitalSignRepository = new Repository<VitalSign>(_context);
+        var appointmentRepository = new Repository<Appointment>(_context);
+
+        _service = new VitalSignService(
+            vitalSignRepository, appointmentRepository, _riskEvaluatorMock.Object, _context);
     }
 
     [Fact]
     public async Task RecordReadingAsync_AssignsRiskLevel_FromEvaluator()
     {
-        // Arrange
-        var request = new CreateVitalSignRequest(
-            PatientId: 1, HeartRateBpm: 145, SystolicBp: 190,
-            DiastolicBp: 100, OxygenSaturationPercent: 85);
+        var patient = new Patient { FullName = "Test Patient", DateOfBirth = new DateTime(1980, 1, 1), Gender = "Female" };
+        _context.Patients.Add(patient);
+        await _context.SaveChangesAsync();
 
-        _riskEvaluatorMock
-            .Setup(e => e.Evaluate(It.IsAny<VitalSign>()))
-            .Returns(RiskLevel.Critical);
+        var request = new CreateVitalSignRequest(patient.Id, 145, 190, 100, 85);
 
-        // Act
+        _riskEvaluatorMock.Setup(e => e.Evaluate(It.IsAny<VitalSign>())).Returns(RiskLevel.Critical);
+
         var result = await _service.RecordReadingAsync(request);
 
-        // Assert
         Assert.Equal(RiskLevel.Critical, result.RiskLevel);
     }
 
     [Fact]
     public async Task RecordReadingAsync_SavesExactlyOnce()
     {
-        var request = new CreateVitalSignRequest(1, 75, 120, 80, 98);
+        var patient = new Patient { FullName = "Test Patient", DateOfBirth = new DateTime(1980, 1, 1), Gender = "Female" };
+        _context.Patients.Add(patient);
+        await _context.SaveChangesAsync();
 
-        _riskEvaluatorMock
-            .Setup(e => e.Evaluate(It.IsAny<VitalSign>()))
-            .Returns(RiskLevel.Normal);
+        var request = new CreateVitalSignRequest(patient.Id, 75, 120, 80, 98);
+        _riskEvaluatorMock.Setup(e => e.Evaluate(It.IsAny<VitalSign>())).Returns(RiskLevel.Normal);
 
         await _service.RecordReadingAsync(request);
 
-        // Verify confirms the repository was actually asked to persist the
-        // reading — a bug that skipped or duplicated the save call would
-        // pass a naive "does it return the right value" test but fail this.
-        _repositoryMock.Verify(r => r.AddAsync(It.IsAny<VitalSign>()), Times.Once);
-        _repositoryMock.Verify(r => r.SaveChangesAsync(), Times.Once);
+        var savedCount = await _context.VitalSigns.CountAsync(v => v.PatientId == patient.Id);
+        Assert.Equal(1, savedCount);
     }
 
     [Fact]
     public async Task RecordReadingAsync_PassesCorrectPatientIdToRepository()
     {
-        var request = new CreateVitalSignRequest(
-            PatientId: 42, HeartRateBpm: 75, SystolicBp: 120,
-            DiastolicBp: 80, OxygenSaturationPercent: 98);
+        var patient = new Patient { FullName = "Test Patient", DateOfBirth = new DateTime(1980, 1, 1), Gender = "Female" };
+        _context.Patients.Add(patient);
+        await _context.SaveChangesAsync();
 
-        _riskEvaluatorMock
-            .Setup(e => e.Evaluate(It.IsAny<VitalSign>()))
-            .Returns(RiskLevel.Normal);
-
-        VitalSign? capturedEntity = null;
-        _repositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<VitalSign>()))
-            .Callback<VitalSign>(v => capturedEntity = v)
-            .Returns(Task.CompletedTask);
+        var request = new CreateVitalSignRequest(patient.Id, 75, 120, 80, 98);
+        _riskEvaluatorMock.Setup(e => e.Evaluate(It.IsAny<VitalSign>())).Returns(RiskLevel.Normal);
 
         await _service.RecordReadingAsync(request);
 
-        Assert.NotNull(capturedEntity);
-        Assert.Equal(42, capturedEntity!.PatientId);
+        var saved = await _context.VitalSigns.FirstOrDefaultAsync(v => v.PatientId == patient.Id);
+        Assert.NotNull(saved);
+        Assert.Equal(patient.Id, saved!.PatientId);
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+        _connection.Dispose();
     }
 }
