@@ -1,5 +1,6 @@
 ﻿using System.Text;
-using CardiacMonitoring.Api.Data;
+using CardiacMonitoring.Api.Data; 
+using CardiacMonitoring.Api.Identity;
 using CardiacMonitoring.Api.Repositories;
 using CardiacMonitoring.Api.Services;
 using FluentValidation;
@@ -23,8 +24,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ---- Identity ----
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
-    {
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>    {
         options.Password.RequiredLength = 8;
     })
     .AddEntityFrameworkStores<AppDbContext>()

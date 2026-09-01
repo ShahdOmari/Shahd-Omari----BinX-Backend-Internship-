@@ -1,12 +1,16 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using CardiacMonitoring.Api.DTOs.Auth;
+using CardiacMonitoring.Api.DTOs.Auth; 
+using CardiacMonitoring.Api.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens; 
 using Microsoft.AspNetCore.RateLimiting;  
-using Microsoft.AspNetCore.Authorization; 
+using Microsoft.AspNetCore.Authorization;  
+using CardiacMonitoring.Api.Data;
+using CardiacMonitoring.Api.Entities; 
+using Microsoft.EntityFrameworkCore;
 
 
 namespace CardiacMonitoring.Api.Controllers;
@@ -16,39 +20,70 @@ namespace CardiacMonitoring.Api.Controllers;
 [EnableRateLimiting("general")]
 public class AuthController : ControllerBase
 {
-    private readonly UserManager<IdentityUser> _userManager;
-    private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IConfiguration _configuration;
 
+    private readonly AppDbContext _context;
+
     public AuthController(
-        UserManager<IdentityUser> userManager,
-        SignInManager<IdentityUser> signInManager,
-        RoleManager<IdentityRole> roleManager,
-        IConfiguration configuration)
-    {
-        _userManager = userManager;
-        _signInManager = signInManager;
-        _roleManager = roleManager;
-        _configuration = configuration;
-    }
+    UserManager<ApplicationUser> userManager,
+    SignInManager<ApplicationUser> signInManager,
+    RoleManager<IdentityRole> roleManager,
+    IConfiguration configuration,
+    AppDbContext context)
+{
+    _userManager = userManager;
+    _signInManager = signInManager;
+    _roleManager = roleManager;
+    _configuration = configuration;
+    _context = context;
+}
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterRequest request)
+public async Task<IActionResult> Register(RegisterRequest request)
+{
+    // Both records must be created together — a user who can log in but
+    // has no matching StaffProfile would hit confusing errors on every
+    // domain-specific endpoint afterward. Same transaction pattern as
+    // Sprint 1 Day 4's critical-reading follow-up scheduling.
+    using var transaction = await _context.Database.BeginTransactionAsync();
+    try
     {
-        var user = new IdentityUser { UserName = request.Email, Email = request.Email };
+        var user = new ApplicationUser
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            FullName = request.Email
+        };
 
-        // UserManager.CreateAsync handles password hashing internally —
-        // never write custom hashing logic when Identity already does it,
-        // correctly and battle-tested (Week 4 Day 1's core lesson).
         var result = await _userManager.CreateAsync(user, request.Password);
-
         if (!result.Succeeded)
+        {
+            await transaction.RollbackAsync();
             return BadRequest(result.Errors);
+        }
 
-        return Ok(new { message = "User registered successfully.", userId = user.Id });
+        var profile = new StaffProfile
+        {
+            ApplicationUserId = user.Id,
+            Department = request.Department,
+            HireDate = DateTime.UtcNow
+        };
+        _context.StaffProfiles.Add(profile);
+        await _context.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+
+        return Ok(new { message = "User registered successfully.", userId = user.Id, staffProfileId = profile.Id });
     }
-
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
     [EnableRateLimiting("login")]
     [HttpPost("login")]
 public async Task<IActionResult> Login(LoginRequest request)
@@ -83,16 +118,25 @@ public async Task<IActionResult> Login(LoginRequest request)
         return Ok(new { message = $"Role '{role}' assigned to {email}." });
     }
 
-    private async Task<string> GenerateJwtToken(IdentityUser user)
+    private async Task<string> GenerateJwtToken(ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email!),
-        };
-
+        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+        new Claim(JwtRegisteredClaimNames.Email, user.Email!),
+        };  
+        // Domain-relevant claim beyond the standard identity ones — lets every
+        // subsequent authenticated request resolve "which StaffProfile does this
+        // token belong to" directly from the token itself, without an extra
+        // database lookup by email on every single request.
+        var staffProfile = await _context.StaffProfiles
+        .FirstOrDefaultAsync(s => s.ApplicationUserId == user.Id);
+        if (staffProfile is not null)
+        {
+        claims.Add(new Claim("staffProfileId", staffProfile.Id.ToString()));
+        }
         // Adding one role claim per role the user holds — this is exactly
         // what [Authorize(Roles = "...")] checks against. Assigning a role
         // in the database alone is not enough; it must be embedded in the
