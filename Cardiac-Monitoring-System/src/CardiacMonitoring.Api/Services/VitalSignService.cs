@@ -25,7 +25,7 @@ public class VitalSignService : IVitalSignService
         _context = context;
     }
 
-    public async Task<VitalSignResponse> RecordReadingAsync(CreateVitalSignRequest request)
+    public async Task<VitalSignResponse> RecordReadingAsync(CreateVitalSignRequest request, int? recordedByStaffProfileId)
     {
         var vitalSign = new VitalSign
         {
@@ -34,7 +34,8 @@ public class VitalSignService : IVitalSignService
             SystolicBp = request.SystolicBp,
             DiastolicBp = request.DiastolicBp,
             OxygenSaturationPercent = request.OxygenSaturationPercent,
-            RecordedAtUtc = DateTime.UtcNow
+            RecordedAtUtc = DateTime.UtcNow,
+            RecordedByStaffProfileId = recordedByStaffProfileId
         };
 
         vitalSign.RiskLevel = _riskEvaluator.Evaluate(vitalSign);
@@ -57,28 +58,28 @@ public class VitalSignService : IVitalSignService
             await _vitalSignRepository.SaveChangesAsync();
 
             if (vitalSign.RiskLevel == RiskLevel.Critical)
-{
-    var next24Hours = DateTime.UtcNow.AddHours(24);
+            {
+                var next24Hours = DateTime.UtcNow.AddHours(24);
 
-    var hasUpcomingAppointment = await _context.Appointments
-        .AnyAsync(a => a.PatientId == request.PatientId
-                       && a.ScheduledAtUtc <= next24Hours
-                       && a.ScheduledAtUtc >= DateTime.UtcNow);
+                var hasUpcomingAppointment = await _context.Appointments
+                    .AnyAsync(a => a.PatientId == request.PatientId
+                                   && a.ScheduledAtUtc <= next24Hours
+                                   && a.ScheduledAtUtc >= DateTime.UtcNow);
 
-    if (!hasUpcomingAppointment)
-    {
-        var followUp = new Appointment
-        {
-            PatientId = request.PatientId,
-            ScheduledAtUtc = DateTime.UtcNow.AddHours(2),
-            DoctorName = "On-Call Cardiologist",
-            Reason = "Urgent follow-up — automatically scheduled after a Critical vital sign reading."
-        };
+                if (!hasUpcomingAppointment)
+                {
+                    var followUp = new Appointment
+                    {
+                        PatientId = request.PatientId,
+                        ScheduledAtUtc = DateTime.UtcNow.AddHours(2),
+                        DoctorName = "On-Call Cardiologist",
+                        Reason = "Urgent follow-up — automatically scheduled after a Critical vital sign reading."
+                    };
 
-        await _appointmentRepository.AddAsync(followUp);
-        await _appointmentRepository.SaveChangesAsync();
-    }
-}
+                    await _appointmentRepository.AddAsync(followUp);
+                    await _appointmentRepository.SaveChangesAsync();
+                }
+            }
 
             await transaction.CommitAsync();
 
@@ -90,9 +91,6 @@ public class VitalSignService : IVitalSignService
         }
         catch
         {
-            // If anything above failed after the vital sign was already
-            // added to the change tracker, rolling back ensures neither the
-            // reading nor a partial follow-up appointment gets persisted.
             await transaction.RollbackAsync();
             throw;
         }
