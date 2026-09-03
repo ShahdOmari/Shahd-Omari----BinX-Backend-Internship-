@@ -78,7 +78,7 @@ Placed after `UseAuthentication()` / `UseAuthorization()` so claims and status c
 
 ## Pull Request
 Branch: `week7/day2-auth`
-PR: [link to your PR on GitHub — update this after merging]
+PR: [[link to your PR on GitHub — update this after merging](https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/pull/33)]
 
 ---
 
