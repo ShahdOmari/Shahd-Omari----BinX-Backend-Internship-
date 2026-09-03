@@ -12,6 +12,13 @@ namespace CardiacMonitoring.Tests.Integration;
 // happened once already — see Day 3's writeup on the accidental
 // class-level [Authorize] bug) could let an unprivileged Nurse account
 // perform Doctor-only actions like prescribing or removing medication.
+//
+// Collection attribute forces these tests to run sequentially rather than
+// in parallel — several of them promote a fresh account to Doctor via the
+// shared seeded Admin account and login endpoint, which is rate-limited
+// to 5 requests/minute. Running them in parallel risks tripping that
+// limiter and getting an empty 429 response instead of a real token.
+[Collection("Sequential")]
 public class RoleBasedAccessTests : IClassFixture<CardiacApiFactory>
 {
     private readonly CardiacApiFactory _factory;
@@ -21,23 +28,57 @@ public class RoleBasedAccessTests : IClassFixture<CardiacApiFactory>
         _factory = factory;
     }
 
-    // Registers a user, assigns the given role, and logs in again — a
-    // second login is required because the JWT's role claim is baked in
-    // at token-issue time, not read live from the database on every
-    // request (see Week 4 Day 3's lesson on this exact point).
     private async Task<HttpClient> CreateClientWithRoleAsync(string role)
     {
         var client = _factory.CreateClient();
         var email = $"{role.ToLower()}.{Guid.NewGuid():N}@cardiac.test";
         const string password = "TestPass@123";
+        const string department = "Testing";
 
-        await client.PostAsJsonAsync("/api/v1/Auth/register", new { email, password });
-        await client.PostAsync(
-            $"/api/v1/Auth/assign-role?email={Uri.EscapeDataString(email)}&role={role}",
-            content: null);
+        var registerResponse = await client.PostAsJsonAsync("/api/v1/Auth/register", new { email, password, department });
+        var registerBody = await registerResponse.Content.ReadAsStringAsync();
+        if (!registerResponse.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"Register failed: {(int)registerResponse.StatusCode} {registerResponse.StatusCode}. Body: {registerBody}");
+
+        if (role != "Nurse")
+        {
+            var adminClient = await CreateAdminClientAsync();
+            var assignResponse = await adminClient.PostAsync(
+                $"/api/v1/Auth/assign-role?email={Uri.EscapeDataString(email)}&role={role}",
+                content: null);
+            var assignBody = await assignResponse.Content.ReadAsStringAsync();
+            if (!assignResponse.IsSuccessStatusCode)
+                throw new InvalidOperationException(
+                    $"Assign-role failed: {(int)assignResponse.StatusCode} {assignResponse.StatusCode}. Body: {assignBody}");
+        }
 
         var loginResponse = await client.PostAsJsonAsync("/api/v1/Auth/login", new { email, password });
-        var loginResult = await loginResponse.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+        if (!loginResponse.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"Login failed: {(int)loginResponse.StatusCode} {loginResponse.StatusCode}. Body: {loginBody}");
+
+        var loginResult = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(loginBody);
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", loginResult!["token"]);
+
+        return client;
+    }
+
+    private async Task<HttpClient> CreateAdminClientAsync()
+    {
+        var client = _factory.CreateClient();
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/v1/Auth/login",
+            new { email = "admin@cardiac.com", password = "AdminPass123!" });
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+        if (!loginResponse.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"Admin login failed: {(int)loginResponse.StatusCode} {loginResponse.StatusCode}. Body: {loginBody}");
+
+        var loginResult = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(loginBody);
 
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", loginResult!["token"]);
@@ -56,19 +97,13 @@ public class RoleBasedAccessTests : IClassFixture<CardiacApiFactory>
     [Fact]
     public async Task CreateMedication_ReturnsForbidden_ForNurseRole()
     {
-        // Arrange — a Nurse is authenticated (identity is known), but
-        // MedicationsController.Create is restricted to Doctor only.
         var nurseClient = await CreateClientWithRoleAsync("Nurse");
         var patientId = await CreateTestPatientAsync(nurseClient);
 
         var request = new CreateMedicationRequest(patientId, "Metoprolol", 50, "Twice daily");
 
-        // Act
         var response = await nurseClient.PostAsJsonAsync("/api/v1/Medications", request);
 
-        // Assert — 403, not 401: the Nurse is genuinely authenticated,
-        // just lacks the required role. Confusing these two is a common,
-        // subtle authorization bug.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
@@ -88,10 +123,6 @@ public class RoleBasedAccessTests : IClassFixture<CardiacApiFactory>
     [Fact]
     public async Task DeleteMedication_ReturnsForbidden_ForNurseRole()
     {
-        // The same boundary, checked on Delete specifically — Create and
-        // Delete are separate [Authorize(Roles = "Doctor")] attributes in
-        // the controller, so a regression could plausibly affect one
-        // without affecting the other.
         var doctorClient = await CreateClientWithRoleAsync("Doctor");
         var patientId = await CreateTestPatientAsync(doctorClient);
         var createResponse = await doctorClient.PostAsJsonAsync(

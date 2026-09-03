@@ -27,8 +27,9 @@ public class BusinessRuleValidationTests : IClassFixture<CardiacApiFactory>
         var client = _factory.CreateClient();
         var email = $"validation.{Guid.NewGuid():N}@cardiac.test";
         const string password = "TestPass@123";
+        const string department = "Testing";
 
-        await client.PostAsJsonAsync("/api/v1/Auth/register", new { email, password });
+        await client.PostAsJsonAsync("/api/v1/Auth/register", new { email, password, department });
         var loginResponse = await client.PostAsJsonAsync("/api/v1/Auth/login", new { email, password });
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<Dictionary<string, string>>();
 
@@ -43,9 +44,6 @@ public class BusinessRuleValidationTests : IClassFixture<CardiacApiFactory>
     {
         var client = await CreateAuthenticatedClientAsync();
 
-        // No patient with this Id was ever created in this test — the
-        // async MustAsync rule in CreateVitalSignValidator is expected to
-        // catch this before anything reaches the database.
         var request = new CreateVitalSignRequest(
             PatientId: 999_999, HeartRateBpm: 75, SystolicBp: 120,
             DiastolicBp: 80, OxygenSaturationPercent: 98);
@@ -71,20 +69,16 @@ public class BusinessRuleValidationTests : IClassFixture<CardiacApiFactory>
             PatientId: patient!.Id, HeartRateBpm: 145, SystolicBp: 190,
             DiastolicBp: 100, OxygenSaturationPercent: 85);
 
-var response = await client.PostAsJsonAsync("/api/v1/VitalSigns", vitalRequest);
+        var response = await client.PostAsJsonAsync("/api/v1/VitalSigns", vitalRequest);
 
-response.EnsureSuccessStatusCode();
+        response.EnsureSuccessStatusCode();
 
-// JsonSerializerDefaults.Web matches ASP.NET Core's own default JSON
-// behavior (camelCase, case-insensitive property matching) — the plain
-// JsonSerializerOptions() constructor used earlier didn't enable
-// case-insensitive property matching, which silently left every property
-// at its default value instead of throwing, masking the real problem.
-var jsonOptions = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
-jsonOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        var jsonOptions = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        jsonOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 
-var rawBody = await response.Content.ReadAsStringAsync();
-var created = System.Text.Json.JsonSerializer.Deserialize<VitalSignResponse>(rawBody, jsonOptions);
+        var rawBody = await response.Content.ReadAsStringAsync();
+        var created = System.Text.Json.JsonSerializer.Deserialize<VitalSignResponse>(rawBody, jsonOptions);
 
-Assert.Equal(CardiacMonitoring.Api.Entities.RiskLevel.Critical, created!.RiskLevel);    }
+        Assert.Equal(CardiacMonitoring.Api.Entities.RiskLevel.Critical, created!.RiskLevel);
+    }
 }

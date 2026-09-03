@@ -1,25 +1,26 @@
-# Week 7 — Sprint 2: Identity & Role-Based Authorization
+﻿# Week 7 — Sprint 2: Identity & Role-Based Authorization
 
-### BinX Backend Development Internship (.NET) — Phase 3, Sprint 2
-### Capstone Project: Cardiac Patient Monitoring System
+Second sprint of the Cardiac Patient Monitoring System capstone.
 
----
+## Sprint Goal
+Wire ASP.NET Core Identity into the capstone, issue JWTs with domain-specific claims, enforce real role-based access control across every endpoint, and add an audit trail middleware.
 
-## Overview
+## Days
+| Day | Focus | Key Deliverable |
+|-----|-------|-----------------|
+| 1 | Sprint planning + Identity wiring | `ApplicationUser`, `StaffProfile` entity, role model (Nurse/Doctor/Auditor) |
+| 2 | JWT registration & login | `StaffProfile` linked at registration, `staffProfileId` JWT claim |
+| 3 | RBAC + Ownership checks | Role requirements on every endpoint, ownership check on VitalSigns |
+| 4 | Custom middleware + PR | `AuditLoggingMiddleware`, Sprint 2 Pull Request |
 
-Sprint 2 extends the existing Identity/RBAC foundation (built in Weeks 1-4) rather
-than integrating it for the first time. Focus: separating authentication concerns
-from domain profile data, and planning a third, read-only compliance role.
+## Roles Used (domain-appropriate, not generic Admin/User)
+- **Nurse** — default at registration; records vitals, views patients
+- **Doctor** — explicitly granted; full clinical access including prescribing and deleting
+- **Auditor** — explicitly granted; read-only access for compliance review
+- **Admin** — seeded once at startup; manages roles and system-level operations
 
-## Daily Progress
+## Test Suite
+26 tests, 26 passing at end of Sprint 2.
 
-| Day | Topic | Status |
-|---|---|---|
-| [Day1-Sprint2-Planning-Wiring-Identity-into-Capstone](./Day1-Sprint2-Planning-Wiring-Identity-into-Capstone) | Sprint 2 planning, role planning, ApplicationUser extension | ✅ Complete |
-| [Day2-JWT-Login-Registration-for-Capstone-Project](./Day2-JWT-Login-Registration-for-Capstone-Project) | StaffProfile entity, transactional registration, domain-claim JWT | ✅ Complete |
-
-## Structure Note
-
-Day folders document that day's specific work with their own README and read-only
-code snapshots. The real, buildable project remains at the repo root in
-`Cardiac-Monitoring-System/`.
+## Code
+All runnable code lives in `../Cardiac-Monitoring-System/`. Each day folder here contains read-only snapshots + README.

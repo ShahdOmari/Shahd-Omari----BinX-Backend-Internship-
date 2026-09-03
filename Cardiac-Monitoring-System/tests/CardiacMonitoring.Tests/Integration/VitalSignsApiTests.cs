@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using CardiacMonitoring.Api.DTOs.VitalSigns;
 using Xunit;
 
 namespace CardiacMonitoring.Tests.Integration;
@@ -18,31 +17,49 @@ public class VitalSignsApiTests : IClassFixture<CardiacApiFactory>
         _factory = factory;
     }
 
+    // Sprint 2, Day 3: GetAll is now restricted to Doctor/Auditor/Admin —
+    // a plain Nurse account (the registration default) is deliberately
+    // excluded, so this test authenticates as the seeded Admin account
+    // instead of a freshly self-registered one.
     [Fact]
-    public async Task GetAll_ReturnsSuccess_WhenRequestCarriesAValidJwt()
+    public async Task GetAll_ReturnsSuccess_WhenRequestCarriesAPrivilegedJwt()
     {
-        // Arrange — a real client that first goes through the real
-        // register/login flow, exactly as a genuine caller would, then
-        // attaches the resulting JWT as a bearer token on the request.
         var client = _factory.CreateClient();
-        var email = $"vitalsigns.auth.{Guid.NewGuid():N}@cardiac.test";
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/v1/Auth/login",
+            new { email = "admin@cardiac.com", password = "AdminPass123!" });
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", loginResult!["token"]);
+
+        var response = await client.GetAsync("/api/v1/VitalSigns");
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    // The ownership/RBAC counterpart to the success case above — a
+    // regular Nurse is genuinely authenticated but lacks the Doctor/
+    // Auditor/Admin role this endpoint now requires, so it must be 403,
+    // not 401.
+    [Fact]
+    public async Task GetAll_ReturnsForbidden_ForPlainNurseRole()
+    {
+        var client = _factory.CreateClient();
+        var email = $"vitalsigns.nurse.{Guid.NewGuid():N}@cardiac.test";
         var token = await _factory.RegisterAndLoginAsync(client, email, "TestPass@123");
 
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await client.GetAsync("/api/v1/VitalSigns");
 
-        // Assert
-        response.EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
     public async Task GetAll_ReturnsUnauthorized_WhenNoTokenIsAttached()
     {
-        // A plain client with no Authorization header at all — the
-        // baseline negative case every protected endpoint must reject.
         var client = _factory.CreateClient();
 
         var response = await client.GetAsync("/api/v1/VitalSigns");
@@ -53,10 +70,6 @@ public class VitalSignsApiTests : IClassFixture<CardiacApiFactory>
     [Fact]
     public async Task GetAll_ReturnsUnauthorized_WhenTokenIsMalformed()
     {
-        // A token-shaped string that isn't a real, validly-signed JWT —
-        // confirms the API actually validates the token's signature and
-        // structure, rather than just checking that "something" was sent
-        // in the Authorization header.
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", "this-is-not-a-real-jwt");

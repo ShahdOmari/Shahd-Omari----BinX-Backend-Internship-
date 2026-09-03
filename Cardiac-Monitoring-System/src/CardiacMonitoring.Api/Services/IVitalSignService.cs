@@ -7,5 +7,5 @@ namespace CardiacMonitoring.Api.Services;
 // tests, instead of being buried inside VitalSignsController.Create.
 public interface IVitalSignService
 {
-    Task<VitalSignResponse> RecordReadingAsync(CreateVitalSignRequest request);
+    Task<VitalSignResponse> RecordReadingAsync(CreateVitalSignRequest request, int? recordedByStaffProfileId);
 }

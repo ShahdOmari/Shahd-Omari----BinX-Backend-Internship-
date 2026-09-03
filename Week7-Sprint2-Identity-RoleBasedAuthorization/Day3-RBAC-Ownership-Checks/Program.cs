@@ -232,14 +232,6 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Audit logging runs after authentication so the current user's claims
-// are already resolved — the middleware can then record which specific
-// staff member made each request, rather than logging everyone as anonymous.
-// Placed after UseAuthorization (not before) so the response status code
-// is already set when we log it.
-app.UseMiddleware<CardiacMonitoring.Api.Middleware.AuditLoggingMiddleware>();
-
 app.MapControllers();
 
 app.Run(); 

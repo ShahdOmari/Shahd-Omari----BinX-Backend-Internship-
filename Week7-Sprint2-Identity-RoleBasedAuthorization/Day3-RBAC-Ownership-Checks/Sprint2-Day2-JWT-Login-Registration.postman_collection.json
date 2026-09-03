@@ -1,0 +1,318 @@
+{
+  "info": {
+    "_postman_id": "a9866925-830a-45e7-8dce-ea1ea2fa6f16",
+    "name": "Sprint2-Day2-JWT-Login-Registration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54406292",
+    "_collection_link": "https://go.postman.co/collection/54406292-a9866925-830a-45e7-8dce-ea1ea2fa6f16?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Registration succeeded\", () => pm.response.to.have.status(200));\r\nconst json = pm.response.json();\r\npm.test(\"Response includes staffProfileId\", () => {\r\n    pm.expect(json).to.have.property(\"staffProfileId\");\r\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"email\": \"nurse3@cardiac.com\",\r\n  \"password\": \"NursePass123!\",\r\n  \"department\": \"Emergency\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/Auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "Auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Login succeeded\", () => pm.response.to.have.status(200));\r\npm.environment.set(\"staffToken\", pm.response.json().token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"email\": \"nurse2@cardiac.com\",\r\n  \"password\": \"NursePass123!\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/Auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "Auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "assign-role",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminAuth}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/Auth/assign-role?email=nurse3@cardiac.com&role=Doctor",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "Auth",
+            "assign-role"
+          ],
+          "query": [
+            {
+              "key": "email",
+              "value": "nurse3@cardiac.com"
+            },
+            {
+              "key": "role",
+              "value": "Doctor"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Nurse blocked from GetAll VitalSigns",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{nurseAuth}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/VitalSigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "VitalSigns"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Nurse blocked from Critical VitalSigns",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{nurseAuth}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/VitalSigns/critical",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "VitalSigns",
+            "critical"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Doctor allowed GetAll VitalSigns",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{doctorToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/VitalSigns/critical",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "VitalSigns",
+            "critical"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Doctor allowed Critical VitalSigns",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{doctorToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/VitalSigns/critical",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "VitalSigns",
+            "critical"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Post VitalSign",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{nurse1Auth}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"patientId\": 1,\r\n  \"heartRateBpm\": 78,\r\n  \"systolicBp\": 120,\r\n  \"diastolicBp\": 80,\r\n  \"oxygenSaturationPercent\": 97\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/VitalSigns",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "VitalSigns"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get by ID vitalSigns",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{doctorToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/VitalSigns/3",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "VitalSigns",
+            "3"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
