@@ -21,10 +21,23 @@ builder.Services.AddControllers()
 
 // ---- Database ----
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+
+    // Sprint 3, Day 1: enable query logging in development so we can
+    // see the exact SQL generated and count queries per request — the
+    // only reliable way to diagnose N+1 problems is to watch the actual
+    // queries, not to guess from reading the C# code.
+    if (builder.Environment.IsDevelopment())
+    {
+        options.LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information)
+               .EnableSensitiveDataLogging()
+               .EnableDetailedErrors();
+    }
+});
 
 // ---- Identity ----
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>    {
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
         options.Password.RequiredLength = 8;
     })
     .AddEntityFrameworkStores<AppDbContext>()
@@ -59,17 +72,10 @@ builder.Services.AddScoped<IRiskEvaluator, CardiacRiskEvaluator>();
 builder.Services.AddScoped<IVitalSignService, VitalSignService>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>(); 
 
-// Registers the global exception handler and ASP.NET Core's built-in
-// ProblemDetails service (which also standardizes automatic responses
-// like model-validation failures into the same RFC 7807 shape).
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // ---- CORS ----
-// A named policy allowing only a specific known frontend origin — a
-// permissive "allow any origin" policy is convenient in development but
-// should never ship to production, since it lets any website's script
-// call this API on a logged-in user's behalf.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -81,8 +87,6 @@ builder.Services.AddCors(options =>
 });
 
 // ---- Rate Limiting ----
-// A stricter limiter on login specifically, since repeated rapid login
-// attempts are the clearest sign of a brute-force attack in progress.
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("general", opt =>
@@ -129,59 +133,114 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var app = builder.Build();   
-// Synthetic seed data — ensures the database always has demonstrable
-// content for grading/demo purposes without requiring manual setup.
-// Idempotent: only seeds if the Patients table is empty, so re-running
-// the app never creates duplicates.
+var app = builder.Build();
+
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Sprint 3, Day 1: realistic seed volume — 2 patients with 3 readings
+    // each is invisible to N+1 problems. 20 patients with 15+ readings each
+    // makes them immediately visible in the query log as a flood of SQL
+    // statements instead of the expected 1-2 queries.
     if (!context.Patients.Any())
     {
-        var patient1 = new CardiacMonitoring.Api.Entities.Patient
+        var rng = new Random(42);
+
+        var patientData = new[]
         {
-            FullName = "Layla Ahmad", DateOfBirth = new DateTime(1968, 4, 12), Gender = "Female"
+            ("Layla Ahmad",      new DateTime(1968,  4, 12), "Female"),
+            ("Omar Khalil",      new DateTime(1975, 11,  3), "Male"),
+            ("Sara Hassan",      new DateTime(1982,  7, 22), "Female"),
+            ("Ahmad Nasser",     new DateTime(1955,  3,  8), "Male"),
+            ("Rania Yousef",     new DateTime(1990,  1, 30), "Female"),
+            ("Khalid Mansour",   new DateTime(1963,  9, 14), "Male"),
+            ("Nour Al-Deen",     new DateTime(1978,  5, 19), "Female"),
+            ("Tariq Ibrahim",    new DateTime(1948, 12,  1), "Male"),
+            ("Hana Saleh",       new DateTime(1985,  8,  6), "Female"),
+            ("Yousef Al-Rashid", new DateTime(1970,  2, 27), "Male"),
+            ("Dina Khalil",      new DateTime(1993,  6, 11), "Female"),
+            ("Majed Qasim",      new DateTime(1960, 10, 18), "Male"),
+            ("Lina Farouk",      new DateTime(1987,  4,  3), "Female"),
+            ("Bilal Amin",       new DateTime(1952,  7, 29), "Male"),
+            ("Aya Mustafa",      new DateTime(1995,  3, 15), "Female"),
+            ("Faris Al-Omari",   new DateTime(1967, 11, 22), "Male"),
+            ("Sana Haddad",      new DateTime(1980,  9,  7), "Female"),
+            ("Ramzi Barakat",    new DateTime(1944,  1, 14), "Male"),
+            ("Mira Aziz",        new DateTime(1988,  6, 25), "Female"),
+            ("Ziad Karimi",      new DateTime(1973,  8, 31), "Male"),
         };
-        var patient2 = new CardiacMonitoring.Api.Entities.Patient
+
+        var patients = patientData.Select(p => new CardiacMonitoring.Api.Entities.Patient
         {
-            FullName = "Omar Khalil", DateOfBirth = new DateTime(1975, 11, 3), Gender = "Male"
-        };
-        context.Patients.AddRange(patient1, patient2);
+            FullName = p.Item1, DateOfBirth = p.Item2, Gender = p.Item3
+        }).ToList();
+
+        context.Patients.AddRange(patients);
         context.SaveChanges();
 
-        context.VitalSigns.AddRange(
-            new CardiacMonitoring.Api.Entities.VitalSign
-            {
-                PatientId = patient1.Id, HeartRateBpm = 78, SystolicBp = 122, DiastolicBp = 80,
-                OxygenSaturationPercent = 97, RecordedAtUtc = DateTime.UtcNow.AddHours(-2),
-                RiskLevel = CardiacMonitoring.Api.Entities.RiskLevel.Normal
-            },
-            new CardiacMonitoring.Api.Entities.VitalSign
-            {
-                PatientId = patient2.Id, HeartRateBpm = 138, SystolicBp = 188, DiastolicBp = 102,
-                OxygenSaturationPercent = 88, RecordedAtUtc = DateTime.UtcNow.AddMinutes(-30),
-                RiskLevel = CardiacMonitoring.Api.Entities.RiskLevel.Critical
-            });
+        var vitals      = new List<CardiacMonitoring.Api.Entities.VitalSign>();
+        var medications = new List<CardiacMonitoring.Api.Entities.Medication>();
+        var appointments= new List<CardiacMonitoring.Api.Entities.Appointment>();
 
-        context.Medications.Add(new CardiacMonitoring.Api.Entities.Medication
+        var medicationNames = new[] { "Lisinopril", "Metoprolol", "Aspirin", "Atorvastatin", "Warfarin", "Amiodarone" };
+        var frequencies     = new[] { "Once daily", "Twice daily", "Three times daily", "As needed" };
+        var doctors         = new[] { "Dr. Nadia Saleh", "Dr. Khalid Omar", "Dr. Rana Haddad", "Dr. Samir Aziz" };
+        var reasons         = new[] { "Cardiac follow-up", "Routine check", "Medication review", "Post-discharge follow-up" };
+
+        foreach (var patient in patients)
         {
-            PatientId = patient1.Id, Name = "Lisinopril", DosageMg = 10, Frequency = "Once daily"
-        });
+            for (int i = 0; i < 15; i++)
+            {
+                var hr  = rng.Next(38, 145);
+                var sbp = rng.Next(78, 195);
+                var dbp = rng.Next(50, 110);
+                var spo = 85.0 + rng.NextDouble() * 15;
 
-        context.Appointments.Add(new CardiacMonitoring.Api.Entities.Appointment
-        {
-            PatientId = patient2.Id, ScheduledAtUtc = DateTime.UtcNow.AddDays(3),
-            DoctorName = "Dr. Nadia Saleh", Reason = "Cardiac follow-up"
-        });
+                var risk = (hr > 130 || hr < 40 || sbp > 180 || sbp < 80 || spo < 90)
+                    ? CardiacMonitoring.Api.Entities.RiskLevel.Critical
+                    : (hr > 100 || sbp > 140 || spo < 95)
+                        ? CardiacMonitoring.Api.Entities.RiskLevel.Watch
+                        : CardiacMonitoring.Api.Entities.RiskLevel.Normal;
 
-               context.SaveChanges();
+                vitals.Add(new CardiacMonitoring.Api.Entities.VitalSign
+                {
+                    PatientId               = patient.Id,
+                    HeartRateBpm            = hr,
+                    SystolicBp              = sbp,
+                    DiastolicBp             = dbp,
+                    OxygenSaturationPercent = Math.Round(spo, 1),
+                    RecordedAtUtc           = DateTime.UtcNow.AddHours(-(i * 8 + rng.Next(1, 5))),
+                    RiskLevel               = risk
+                });
+            }
+
+            for (int i = 0; i < 2; i++)
+                medications.Add(new CardiacMonitoring.Api.Entities.Medication
+                {
+                    PatientId = patient.Id,
+                    Name      = medicationNames[rng.Next(medicationNames.Length)],
+                    DosageMg  = rng.Next(5, 100) * 5,
+                    Frequency = frequencies[rng.Next(frequencies.Length)]
+                });
+
+            for (int i = 0; i < 2; i++)
+                appointments.Add(new CardiacMonitoring.Api.Entities.Appointment
+                {
+                    PatientId      = patient.Id,
+                    ScheduledAtUtc = DateTime.UtcNow.AddDays(rng.Next(1, 30)),
+                    DoctorName     = doctors[rng.Next(doctors.Length)],
+                    Reason         = reasons[rng.Next(reasons.Length)]
+                });
+        }
+
+        context.VitalSigns.AddRange(vitals);
+        context.Medications.AddRange(medications);
+        context.Appointments.AddRange(appointments);
+        context.SaveChanges();
     }
 
-    // Seed one initial Admin account so the system is never in a state
-    // where no one can grant Doctor/Admin roles to anyone else — without
-    // this, assign-role being Admin-only would create a chicken-and-egg
-    // problem with no way to create the first Admin.
+    // Seed Admin account
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<CardiacMonitoring.Api.Identity.ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
@@ -194,13 +253,10 @@ using (var scope = app.Services.CreateScope())
         var adminUser = new CardiacMonitoring.Api.Identity.ApplicationUser
         {
             UserName = adminEmail,
-            Email = adminEmail,
+            Email    = adminEmail,
             FullName = "System Administrator"
         };
 
-        // Seed credentials are for local/dev demo purposes only — a real
-        // deployment would rotate this immediately or provision it via a
-        // secure out-of-band channel, never a hardcoded string in source.
         var result = await userManager.CreateAsync(adminUser, "AdminPass123!");
         if (result.Succeeded)
             await userManager.AddToRoleAsync(adminUser, "Admin");
@@ -216,35 +272,16 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // HSTS tells browsers to always use HTTPS for this domain going
-    // forward. Only enabled outside Development, since it would otherwise
-    // block local HTTP testing in the browser.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-// Order matters: CORS and rate limiting run before authentication/
-// authorization, so a disallowed origin or a rate-limited client is
-// rejected before the request ever reaches an identity check.
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Audit logging runs after authentication so the current user's claims
-// are already resolved — the middleware can then record which specific
-// staff member made each request, rather than logging everyone as anonymous.
-// Placed after UseAuthorization (not before) so the response status code
-// is already set when we log it.
 app.UseMiddleware<CardiacMonitoring.Api.Middleware.AuditLoggingMiddleware>();
-
 app.MapControllers();
-
 app.Run(); 
 
-// Exposed as public so WebApplicationFactory<Program> in the test project
-// can reference this entry point — top-level statement Program classes
-// are internal by default.
 public partial class Program { }
