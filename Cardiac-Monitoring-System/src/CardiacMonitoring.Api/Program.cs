@@ -66,6 +66,11 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// ---- Caching ----
+builder.Services.AddStackExchangeRedisCache(options =>
+    options.Configuration = builder.Configuration.GetConnectionString("Redis"));
+builder.Services.AddSingleton<CardiacMonitoring.Api.Services.ICacheService, CardiacMonitoring.Api.Services.CacheService>();
+
 // ---- Application services ----
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IRiskEvaluator, CardiacRiskEvaluator>(); 
@@ -285,3 +290,4 @@ app.MapControllers();
 app.Run(); 
 
 public partial class Program { }
+
