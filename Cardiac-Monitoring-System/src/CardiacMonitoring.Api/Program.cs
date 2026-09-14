@@ -112,6 +112,17 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Cardiac Patient Monitoring API",
+        Version = "v1",
+        Description = "REST API for monitoring cardiac patients — vital signs, medications, appointments, and role-based staff access. Built with ASP.NET Core 10, EF Core, SQL Server, Redis caching, and JWT authentication."
+    });
+
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (System.IO.File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath); 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",

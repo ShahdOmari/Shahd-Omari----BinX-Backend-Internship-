@@ -1,278 +1,221 @@
-# Cardiac Patient Monitoring System
+﻿# Cardiac Patient Monitoring System
 
-### Capstone Project — BinX Backend Development Internship (.NET)
-### Applies concepts from Week 1 through Week 5
+A production-grade REST API for monitoring cardiac patients in a hospital setting —
+recording vital signs, managing medications and appointments, and enforcing
+role-based access control across clinical staff.
+
+Built as a capstone project for the **BinX Tech .NET Backend Internship Program**,
+Weeks 6–10.
 
 ---
 
-## 1. Project Overview
+## Tech Stack
 
-A standalone ASP.NET Core Web API for monitoring cardiac patients: patient profiles,
-vital-sign measurements, medications, and appointments — secured behind real
-authentication, validated against real business rules, and covered by a full
-automated test suite.
-
-**What makes this more than plain CRUD:** every vital-sign reading is automatically
-scored for cardiac risk (`Normal` / `Watch` / `Critical`) the moment it's recorded,
-and a dedicated endpoint surfaces which patients need attention right now — a small,
-realistic feature that puts generics, LINQ, dependency injection, and async EF Core
-to work together, not just CRUD boilerplate demonstrated in isolation.
-
-## 2. Why This Idea
-
-A monitoring system is a natural fit for a backend-only API: it has clear entities
-and relationships, a genuine reason for role-based access (a Nurse and a Doctor
-don't have the same permissions), and a natural extension point — risk scoring —
-that showcases real business logic instead of a token example.
-
-## 3. Tech Stack
-
-| Category | Technology |
+| Layer | Technology |
 |---|---|
-| Language & Runtime | C# / .NET 10 |
-| Web Framework | ASP.NET Core Web API |
-| ORM & Database | Entity Framework Core, SQL Server (LocalDB for development) |
-| Identity & Auth | ASP.NET Core Identity, JWT Bearer Authentication |
-| Validation | FluentValidation (including async business rules) |
-| API Documentation | Swashbuckle (Swagger/OpenAPI) |
-| Hardening | Rate limiting, CORS, HSTS/HTTPS redirection |
-| Error Handling | `IExceptionHandler` + RFC 7807 `ProblemDetails` |
-| Testing | xUnit, Moq, `Microsoft.AspNetCore.Mvc.Testing` (WebApplicationFactory), SQLite in-memory |
+| Framework | ASP.NET Core 10 |
+| ORM | Entity Framework Core 10 |
+| Database | SQL Server (LocalDB for development) |
+| Caching | Redis via StackExchange.Redis + IDistributedCache |
+| Authentication | ASP.NET Core Identity + JWT Bearer |
+| Validation | FluentValidation |
+| API Docs | Swashbuckle / Swagger UI (OAS 3.0) |
+| Testing | xUnit, Moq, WebApplicationFactory, SQLite in-memory |
 
-## 4. Domain Model
+---
 
-- **Patient** — core profile (name, date of birth, gender)
-- **VitalSign** — heart rate, blood pressure, oxygen saturation, timestamp, and a
-  computed `RiskLevel`
-- **Medication** — name, dosage, frequency, linked to a patient
-- **Appointment** — scheduled date/time, doctor, reason, linked to a patient
+## Prerequisites
 
-All four have a one-to-many relationship from `Patient`, enforced with foreign keys
-and cascade delete.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [SQL Server LocalDB](https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb) (included with Visual Studio) or SQL Server Express
+- [Redis](https://redis.io/) — Memurai (Windows) or Docker (`docker run -d -p 6379:6379 redis:alpine`)
 
-## 5. Roles
+---
 
-| Role | Can Do |
-|---|---|
-| **Nurse** | Register/login, view patients, record vital signs, view medications/appointments |
-| **Doctor** | Everything a Nurse can do, plus create/update/delete medications, and delete patient records |
+## Getting Started
 
-Verified end-to-end with real issued JWTs in `RoleBasedAccessTests.cs` — a Nurse
-attempting a Doctor-only action correctly receives `403 Forbidden` (authenticated,
-not permitted), never `401` (not authenticated).
+### 1. Clone the repository
 
-## 6. Architecture
-
-```
-Cardiac-Monitoring-System/
-├── CardiacMonitoring.slnx
-├── src/
-│   └── CardiacMonitoring.Api/
-│       ├── Controllers/         # Patients, VitalSigns, Medications, Appointments, Auth, Diagnostics
-│       ├── Entities/             # EF Core domain models (Patient, VitalSign, Medication, Appointment, RiskLevel)
-│       ├── DTOs/                  # Request/response records, grouped by resource
-│       ├── Data/                  # AppDbContext (extends IdentityDbContext)
-│       ├── Migrations/           # EF Core code-first migrations
-│       ├── Repositories/         # Generic IRepository<T> / Repository<T>
-│       ├── Services/              # IRiskEvaluator/CardiacRiskEvaluator, IVitalSignService/VitalSignService
-│       ├── Validators/            # FluentValidation rules (including async PatientId-existence checks)
-│       ├── Middleware/            # GlobalExceptionHandler (IExceptionHandler)
-│       └── Program.cs
-└── tests/
-    └── CardiacMonitoring.Tests/
-        ├── Services/               # Unit tests (xUnit) + Moq-based service tests
-        └── Integration/            # WebApplicationFactory integration tests (SQLite in-memory)
-```
-
-**Layering rationale:** business logic (risk scoring, vital-sign recording) lives in
-`Services/`, not in controllers — this is what makes the Moq-based unit tests in
-`VitalSignServiceTests.cs` possible without touching a real database, and keeps
-`VitalSignsController` a thin HTTP-concerns layer.
-
-## 7. The Generic Repository Pattern
-
-```csharp
-public interface IRepository<T> where T : class
-{
-    Task<T?> GetByIdAsync(int id);
-    Task<IReadOnlyList<T>> GetAllAsync();
-    Task AddAsync(T entity);
-    void Update(T entity);
-    void Remove(T entity);
-    Task<bool> SaveChangesAsync();
-}
-```
-
-One generic implementation (`Repository<T>`), registered once in `Program.cs` via
-`AddScoped(typeof(IRepository<>), typeof(Repository<>))`, is reused for `Patient`,
-`VitalSign`, `Medication`, and `Appointment` — avoiding four nearly-identical
-repository classes.
-
-## 8. The Risk-Scoring Feature
-
-`CardiacRiskEvaluator` applies threshold rules to every new `VitalSign` reading
-*before* it's saved, so a stored reading always carries the risk level that was true
-the moment it was actually recorded:
-
-```csharp
-bool isCritical = v.HeartRateBpm > 130 || v.HeartRateBpm < 40
-    || v.SystolicBp > 180 || v.SystolicBp < 80
-    || v.OxygenSaturationPercent < 90;
-
-bool isWatch = v.HeartRateBpm is > 100 or < 50
-    || v.SystolicBp is > 140 or < 90
-    || v.OxygenSaturationPercent < 95;
-```
-
-`GET /api/v1/VitalSigns/critical` uses LINQ (`GroupBy` → `OrderByDescending` →
-`First` → `Where`) to return only the most recent reading per patient, filtered to
-those currently `Critical` — a genuinely useful "who needs attention right now" view.
-
-## 9. Authentication & Authorization
-
-- **Identity** handles user storage and password hashing (PBKDF2, salted per user) —
-  no custom hashing code anywhere in the project.
-- **JWT** issued on login, with the user's roles embedded as claims at token-issue
-  time (`ClaimTypes.Role`) — this is what `[Authorize(Roles = "Doctor")]` actually
-  checks against; assigning a role in the database alone is not enough.
-- Protected endpoints: everything except `Auth/register` and `Auth/login`.
-  `Medications`' create/update/delete actions are additionally restricted to
-  `Doctor` only.
-
-## 10. Validation
-
-FluentValidation validators cover every `Create` request, including **async business
-rules** — e.g. does the referenced `PatientId` actually exist? Because ASP.NET
-Core's automatic model-validation pipeline only supports synchronous rules,
-validators are invoked explicitly inside each controller action:
-
-```csharp
-var validationResult = await _validator.ValidateAsync(request);
-if (!validationResult.IsValid)
-    return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
-```
-
-## 11. Error Handling
-
-A single `GlobalExceptionHandler` (implementing ASP.NET Core's built-in
-`IExceptionHandler`) catches any unhandled exception anywhere in the pipeline,
-logs full details server-side with structured fields (`RequestMethod`,
-`RequestPath`, `ExceptionType`), and returns a generic, safe `ProblemDetails`
-response to the client — the real exception message and stack trace are never sent
-externally. A permanent `GET /api/v1/Diagnostics/trigger-error` endpoint exists
-purely to verify this end-to-end after any future change.
-
-## 12. Hardening
-
-- **Rate limiting** — a stricter 5-requests/minute limit on `Login` specifically
-  (repeated rapid attempts are the clearest brute-force signal), 100/minute general
-  limit elsewhere.
-- **CORS** — a named policy allowing only a specific known frontend origin, not a
-  permissive "allow any origin" policy.
-- **HTTPS/HSTS** — HTTPS redirection always on; HSTS enabled outside `Development`.
-- **SQL injection** — every query goes through EF Core's LINQ methods, which
-  parameterize automatically; the codebase contains zero raw, string-interpolated
-  SQL (`FromSqlRaw`/`ExecuteSqlRaw`) — verified by direct search.
-
-## 13. Testing
-
-**24 tests, 24 passing**, spanning three layers:
-
-| Layer | File(s) | What It Covers |
-|---|---|---|
-| Unit (xUnit) | `CardiacRiskEvaluatorTests.cs` | 10 tests — every risk-classification boundary, via `[Fact]` and a `[Theory]` with 6 boundary cases |
-| Unit + Moq | `VitalSignServiceTests.cs` | 3 tests — service logic isolated from the database via mocked `IRepository<VitalSign>` and `IRiskEvaluator`; verifies `AddAsync`/`SaveChangesAsync` are each called exactly once |
-| Integration (WebApplicationFactory) | `PatientsApiTests.cs`, `VitalSignsApiTests.cs`, `RoleBasedAccessTests.cs`, `BusinessRuleValidationTests.cs` | 11 tests — real HTTP requests against an in-memory-hosted API with an isolated SQLite in-memory database: happy/error paths, JWT-protected endpoints, RBAC boundaries (`403` vs `401`), async validation rules |
-
-**Test database choice:** SQLite in-memory, not LocalDB — LocalDB is Windows-only,
-and this project is intended to run in a future CI pipeline (GitHub Actions, which
-defaults to Linux runners). SQLite in-memory is cross-platform, fast, and
-self-cleaning (each `WebApplicationFactory` instance gets a fresh, isolated database).
-
-**Testing priority followed risk, not ease:** the two most valuable, previously
-untested areas — RBAC enforcement and async validation rules — were identified
-through explicit risk analysis and closed last, rather than adding shallow tests to
-already-covered code.
-
-### Two real bugs found by these tests
-
-1. **Accidental class-level `[Authorize]` on `AuthController`** — would have blocked
-   every unauthenticated user from registering or logging in at all. Went unnoticed
-   in manual Swagger testing only because a leftover valid token was always present
-   from a previous session. Caught immediately by an integration test using a clean,
-   unauthenticated client.
-2. **Silent JSON enum-deserialization defaulting in the test client** — a bare
-   `new JsonSerializerOptions()` doesn't enable case-insensitive property matching,
-   so `System.Text.Json` silently left `RiskLevel` at its default (`Normal`) instead
-   of throwing, even though the API had returned `"Critical"` correctly. Diagnosed by
-   logging the raw response body directly rather than assuming the API was wrong.
-   Fixed with `new JsonSerializerOptions(JsonSerializerDefaults.Web)`.
-
-## 14. How to Run
-
-### Prerequisites
-- .NET SDK 10
-- SQL Server LocalDB (development) — SQLite is used automatically for tests, no setup needed
-
-### Setup
 ```bash
-cd Cardiac-Monitoring-System/src/CardiacMonitoring.Api
-dotnet restore
-dotnet ef database update
-dotnet run
+git clone https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-.git
+cd Shahd-Omari----BinX-Backend-Internship-\Cardiac-Monitoring-System
 ```
 
-Open the Swagger URL printed in the terminal (e.g. `http://localhost:5286/swagger`).
+### 2. Configure the connection string
 
-### Configuration
-Connection string and JWT settings live in `appsettings.json`:
+Edit `src/CardiacMonitoring.Api/appsettings.json` — the default targets SQL Server LocalDB:
+
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=CardiacMonitoringDb;Trusted_Connection=True;TrustServerCertificate=True;"
-  },
-  "Jwt": {
-    "Issuer": "CardiacMonitoringApi",
-    "Audience": "CardiacMonitoringApiUsers",
-    "Key": "..."
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=CardiacMonitoringDb;Trusted_Connection=True;",
+    "Redis": "localhost:6379"
   }
 }
 ```
 
-### Authentication flow (via Swagger)
-1. `POST /api/v1/Auth/register` — `{ "email": "...", "password": "..." }`
-2. `POST /api/v1/Auth/assign-role?email=...&role=Nurse` (or `Doctor`)
-3. `POST /api/v1/Auth/login` — copy the returned `token`
-4. Click **Authorize** (top right) → `Bearer <token>`
+For a full SQL Server instance, replace `(localdb)\\mssqllocaldb` with your server address.
 
-### Running tests
-```bash
-cd Cardiac-Monitoring-System
-dotnet test
+### 3. Configure JWT settings
+
+In `appsettings.json` (or via user secrets for production):
+
+```json
+{
+  "Jwt": {
+    "Key": "your-secret-key-minimum-32-characters-long",
+    "Issuer": "CardiacMonitoringApi",
+    "Audience": "CardiacMonitoringApiUsers"
+  }
+}
 ```
 
-## 15. Demo Checklist (5–10 minutes)
+### 4. Apply database migrations
 
-1. Show Swagger — walk through the resource list and the `/critical` endpoint.
-2. Register → assign role → login → show the JWT and its role claim.
-3. Create a Patient, then a Critical vital sign for them → show `RiskLevel` in the
-   response.
-4. `GET /VitalSigns/critical` → show it returns only that patient.
-5. Attempt a Doctor-only action (create Medication) as a Nurse → `403`.
-6. Same action as a Doctor → succeeds.
-7. Trigger a validation failure (invalid `PatientId`) → `400` with a clear message.
-8. Hit `GET /Diagnostics/trigger-error` → show the safe `ProblemDetails` response.
-9. Run `dotnet test` live → 24/24 passing.
+```bash
+cd src/CardiacMonitoring.Api
+dotnet ef database update
+```
 
-## 16. What's Deliberately Out of Scope
+This applies all migrations and seeds:
+- 20 patients, 300 vital sign readings, 40 medications, 40 appointments
+- One Admin account: `admin@cardiac.com` / `AdminPass123!`
 
-- Deployment / CI-CD pipeline (Week 9 material)
-- Refresh tokens (explicitly an optional stretch task even in the training material)
-- Advanced caching or performance work (later Phase 3 sprint)
+### 5. Start Redis
+
+```bash
+# Windows — start Memurai service, or:
+docker run -d --name cardiac-redis -p 6379:6379 redis:alpine
+```
+
+### 6. Run the API
+
+```bash
+dotnet run
+```
+
+API available at: `http://localhost:5286`
+Swagger UI: `http://localhost:5286/swagger`
 
 ---
 
-*This project applies, in order: Week 1 (C#/OOP/collections/LINQ/async), Week 2
-(generics, routing, middleware, DI), Week 3 (REST design, EF Core, SQL Server,
-CRUD), Week 4 (Identity, JWT, RBAC, FluentValidation, hardening), and Week 5
-(xUnit, Moq, WebApplicationFactory integration testing, centralized error handling).*
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `ConnectionStrings__DefaultConnection` | SQL Server connection string | LocalDB |
+| `ConnectionStrings__Redis` | Redis connection string | `localhost:6379` |
+| `Jwt__Key` | JWT signing key (min 32 chars) | *(required)* |
+| `Jwt__Issuer` | JWT issuer claim | `CardiacMonitoringApi` |
+| `Jwt__Audience` | JWT audience claim | `CardiacMonitoringApiUsers` |
+
+---
+
+## Running Tests
+
+```bash
+dotnet test
+```
+
+The test suite uses SQLite in-memory (no SQL Server required) and replaces Redis
+with `AddDistributedMemoryCache()` — no external dependencies needed to run tests.
+Test summary: total: 34, failed: 0, succeeded: 34
+
+---
+
+## API Overview
+
+### Authentication
+
+All endpoints except `POST /Auth/register` and `POST /Auth/login` require a JWT
+Bearer token. Obtain one by registering and logging in:
+
+```bash
+# Register (returns Nurse role by default)
+POST /api/v1/Auth/register
+{ "email": "nurse@hospital.ps", "password": "Pass@123!", "department": "Cardiology" }
+
+# Login
+POST /api/v1/Auth/login
+{ "email": "nurse@hospital.ps", "password": "Pass@123!" }
+# → returns { "token": "eyJ..." }
+
+# Use token in all subsequent requests:
+Authorization: Bearer eyJ...
+```
+
+### Roles
+
+| Role | Default? | Can do |
+|---|---|---|
+| **Nurse** | ✅ At registration | Record vitals, view patients, view own readings |
+| **Doctor** | ❌ Admin grants | Full clinical access, prescribe/delete medications |
+| **Auditor** | ❌ Admin grants | Read-only access across all data |
+| **Admin** | Seeded once | Manage roles, system administration |
+
+```bash
+# Admin promotes a Nurse to Doctor:
+POST /api/v1/Auth/assign-role?email=nurse@hospital.ps&role=Doctor
+Authorization: Bearer <admin-token>
+```
+
+### Key Endpoints
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/api/v1/Patients` | All staff | Paginated patient list (Redis cached) |
+| POST | `/api/v1/Patients` | All staff | Register new patient |
+| DELETE | `/api/v1/Patients/{id}` | Doctor, Admin | Permanently remove patient |
+| GET | `/api/v1/VitalSigns` | Doctor, Auditor, Admin | All readings with patient names |
+| POST | `/api/v1/VitalSigns` | All staff | Record new reading |
+| GET | `/api/v1/VitalSigns/{id}` | Owner or Doctor+ | Single reading (ownership enforced) |
+| GET | `/api/v1/VitalSigns/critical` | Doctor, Admin | Latest critical reading per patient |
+| POST | `/api/v1/Medications` | Doctor, Admin | Prescribe medication |
+| DELETE | `/api/v1/Medications/{id}` | Doctor, Admin | Remove medication |
+
+Full interactive documentation: **http://localhost:5286/swagger**
+
+---
+
+## Architecture Highlights
+
+**Layered security model:**
+Request → Rate Limiter → JWT Auth → Role Check → Ownership Check → Controller
+↓
+AuditLoggingMiddleware
+
+**Performance (Sprint 3):**
+- `GET /VitalSigns/critical`: correlated SQL subquery returns 7 rows instead of full table scan on 300+
+- `GET /Patients`: Redis cache-aside — miss ~30ms, hit ~3ms (98% faster)
+- Composite indexes on `VitalSigns(RiskLevel, RecordedAtUtc)` and `VitalSigns(PatientId, RecordedAtUtc)`
+
+---
+
+## Project Structure
+Cardiac-Monitoring-System/
+├── src/
+│ └── CardiacMonitoring.Api/
+│ ├── Controllers/ # API endpoints
+│ ├── Data/ # EF Core DbContext + migrations
+│ ├── DTOs/ # Request/response shapes
+│ ├── Entities/ # Domain models
+│ ├── Identity/ # ApplicationUser (extends IdentityUser)
+│ ├── Middleware/ # AuditLoggingMiddleware, GlobalExceptionHandler
+│ ├── Repositories/ # Generic repository pattern
+│ ├── Services/ # VitalSignService, CacheService, RiskEvaluator
+│ └── Program.cs
+└── tests/
+└── CardiacMonitoring.Tests/
+├── Integration/ # WebApplicationFactory-based API tests
+└── Unit/ # CardiacRiskEvaluator, VitalSignService tests
+
+---
+
+## Sprint History
+
+| Sprint | Week | Focus |
+|---|---|---|
+| Sprint 1 | Week 6 | Core CRUD API, EF Core, validation, pagination |
+| Sprint 2 | Week 7 | ASP.NET Core Identity, JWT, RBAC, audit middleware |
+| Sprint 3 | Week 8 | Query optimization, Redis caching, database indexes |
+| Sprint 4 | Week 9 | Test coverage, API documentation |
