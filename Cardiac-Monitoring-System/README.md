@@ -1,4 +1,6 @@
-﻿# Cardiac Patient Monitoring System
+﻿![CI](https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/actions/workflows/ci.yml/badge.svg)
+
+# Cardiac Patient Monitoring System
 
 A production-grade REST API for monitoring cardiac patients in a hospital setting —
 recording vital signs, managing medications and appointments, and enforcing
@@ -219,3 +221,4 @@ Cardiac-Monitoring-System/
 | Sprint 2 | Week 7 | ASP.NET Core Identity, JWT, RBAC, audit middleware |
 | Sprint 3 | Week 8 | Query optimization, Redis caching, database indexes |
 | Sprint 4 | Week 9 | Test coverage, API documentation |
+
