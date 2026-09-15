@@ -28,7 +28,7 @@ public class CoverageGapTests : IClassFixture<CardiacApiFactory>
             password = "WrongPassword999!"
         });
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode); // DELIBERATE BREAK
     }
 
     [Fact]
@@ -173,4 +173,5 @@ public class CoverageGapTests : IClassFixture<CardiacApiFactory>
         response.EnsureSuccessStatusCode();
     }
 }
+
 
