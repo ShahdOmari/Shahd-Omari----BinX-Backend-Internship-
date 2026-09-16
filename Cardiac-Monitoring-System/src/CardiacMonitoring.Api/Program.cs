@@ -10,7 +10,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models; 
-using CardiacMonitoring.Api.Middleware;
+using CardiacMonitoring.Api.Middleware; 
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +23,13 @@ builder.Services.AddControllers()
 // ---- Database ----
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+    if (builder.Environment.IsProduction() && connectionString?.StartsWith("postgresql") == true)
+        options.UseNpgsql(connectionString);
+    else
+        options.UseSqlServer(connectionString ?? "");
 
     // Sprint 3, Day 1: enable query logging in development so we can
     // see the exact SQL generated and count queries per request — the
@@ -300,6 +307,9 @@ app.UseMiddleware<CardiacMonitoring.Api.Middleware.AuditLoggingMiddleware>();
 // Lightweight health check for Railway deployment monitoring
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
    .AllowAnonymous();
+
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+   .RequireRateLimiting("general");
 
 app.MapControllers();
 app.Run(); 
