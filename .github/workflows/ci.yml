@@ -28,6 +28,28 @@ jobs:
         run: dotnet build --no-restore --configuration Release
         working-directory: Cardiac-Monitoring-System
 
+      # Tests use SQLite in-memory + AddDistributedMemoryCache —
+      # no SQL Server or Redis required in CI.
       - name: Run tests
         run: dotnet test --no-build --configuration Release --verbosity normal
         working-directory: Cardiac-Monitoring-System
+
+  # Deploy job only runs after tests pass, only on pushes to main (not PRs).
+  # This ensures broken code never reaches production.
+  deploy:
+    name: Deploy to Railway
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service cardiac-monitoring-api
