@@ -297,8 +297,13 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<CardiacMonitoring.Api.Middleware.AuditLoggingMiddleware>();
+// Lightweight health check for Railway deployment monitoring
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+   .AllowAnonymous();
+
 app.MapControllers();
 app.Run(); 
 
 public partial class Program { }
+
 
