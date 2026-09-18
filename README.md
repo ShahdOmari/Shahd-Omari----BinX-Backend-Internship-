@@ -1,113 +1,80 @@
-# BinX Tech Backend Internship
+﻿# BinX Tech — .NET Backend Internship
 
-## About This Repository
+![CI](https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/actions/workflows/ci.yml/badge.svg)
 
-This repository documents my progress through the **BinX Tech Backend Development Internship Program (.NET)** — a 10-week, 400-hour program split into four phases, culminating in a Phase 3 capstone project. It's organized week by week, with each week broken down into daily folders that contain the code, exercises, and a README for that day's work.
+**Intern:** Shahd Omari | **Track:** .NET Backend Development | **Duration:** 10 weeks · 400 hours
 
-Every folder has its own README: a summary at the week level, and a detailed one at the day level covering what was done, key code, and what I learned. This file is just the entry point — start here, then follow the links below into whichever week or day you want to see.
-
-**Tech stack covered so far:**
-- C# and the .NET SDK
-- Object-Oriented Programming (OOP) principles
-- Collections & LINQ (including grouping, joining, flattening, deferred execution)
-- async/await and concurrency (Task.WhenAll, CancellationToken)
-- Generics and constraints
-- ASP.NET Core (Controllers, Minimal APIs, middleware, dependency injection)
-- Git & GitHub workflow (commits, feature branches, pull requests)
-- (Future weeks will expand this list as the internship progresses)
-
-**Tools used:**
-- Visual Studio Code (C# Dev Kit) or Visual Studio
-- .NET SDK
-- Git / GitHub
-- Postman
+A full-stack backend internship program by BinX Tech (Nablus, Palestine), structured across four phases
+and culminating in a production-grade capstone project — a Cardiac Patient Monitoring System built with
+ASP.NET Core 10, deployed live, and backed by a CI/CD pipeline.
 
 ---
 
-## Repository Structure
+## Capstone Project — Cardiac Patient Monitoring System
 
-```
-BinX-Backend-Internship/
-│
-├── README.md                              ← this file
-│
-├── Week1-Onboarding-Csharp-Git/
-│   ├── README.md                          ← Week 1 summary
-│   ├── Day1-EnvironmentSetup/README.md
-│   ├── Day2-TypesControlFlow/README.md
-│   ├── Day3-OOP/README.md
-│   ├── Day4-CollectionsLinq/README.md
-│   └── Day5-GitGithub/README.md
-│
-├── Week2-AdvancedCsharp-AspNetCore/
-│   ├── README.md                          ← Week 2 summary
-│   ├── Day1-Generics/README.md
-│   ├── Day2-AdvancedLinq/README.md
-│   ├── Day3-AsyncConcurrency/README.md
-│   ├── Day4-AspNetCoreSetup/README.md
-│   └── Day5-MiddlewareDI/README.md
-│
-├── Week3-.../                             ← added as the internship progresses
-└── ...
-```
+A real-world REST API for monitoring cardiac patients in a hospital setting:
+vital signs, medications, appointments, and role-based staff access.
 
----
+**Live API:** deployed on Railway → `GET /health` returns `{ status: "healthy" }`
 
-## How to Run a Project
+**Tech stack:**
 
-Most days include one or more .NET console/web projects. To run any of them:
+| Layer | Technology |
+|---|---|
+| Framework | ASP.NET Core 10 |
+| ORM | Entity Framework Core 10 |
+| Database | SQL Server (dev) · PostgreSQL (production) |
+| Caching | Redis · StackExchange.Redis · IDistributedCache |
+| Auth | ASP.NET Core Identity · JWT Bearer |
+| Validation | FluentValidation |
+| Docs | Swashbuckle / Swagger UI (OAS 3.0) |
+| Testing | xUnit · WebApplicationFactory · SQLite in-memory |
+| CI/CD | GitHub Actions · Railway |
 
-```bash
-cd path/to/DayX-Topic/ProjectName
-dotnet run
-```
+**Key achievements by sprint:**
 
-Make sure the .NET SDK is installed and available (`dotnet --version` to check).
+| Sprint | Week | Highlight |
+|---|---|---|
+| Sprint 1 | Week 6 | Core CRUD API, EF Core, pagination, FluentValidation |
+| Sprint 2 | Week 7 | ASP.NET Core Identity, JWT, RBAC across all endpoints, AuditLoggingMiddleware |
+| Sprint 3 | Week 8 | Query optimization (300 rows → 7), Redis cache (2651ms → 3ms), composite indexes |
+| Sprint 4 | Week 9 | 34/34 tests, Swagger docs, GitHub Actions CI, Railway deployment |
+
+**Code:** [Cardiac-Monitoring-System/](Cardiac-Monitoring-System/)
 
 ---
 
-## Git Workflow
+## Program Structure
 
-Each task/day is developed on its own feature branch and merged into `main` via a Pull Request:
-
-```bash
-git checkout -b feature/weekX-dayY-topic
-# ... work, commit ...
-git add .
-git commit -m "Clear description of what was done"
-git push -u origin feature/weekX-dayY-topic
-```
-
-A Pull Request is then opened on GitHub from the feature branch into `main`, describing what was added.
-
-> **Note:** Days 1–4 of Week 1 were committed directly to `main` while I was still getting comfortable with the basic Git commands. Starting with Day 5, I've applied the full feature-branch → pull request workflow for every day/task since.
+10 weeks · 4 phases · feature-branch workflow throughout
+Phase 1 — Foundations (Weeks 1–2) C#, OOP, LINQ, ASP.NET Core basics
+Phase 2 — Core Backend (Weeks 3–5) EF Core, REST design, validation, testing
+Phase 3 — Capstone Project (Weeks 6–9) 4 sprints building the cardiac monitoring API
+Phase 4 — Final Presentation (Week 10) Demo, retrospective, portfolio review
 
 ---
 
-## Week 1 — Onboarding, C# Fundamentals & Git
+## Weeks
 
-**Phase 1 · 40 hours · 5 training days · Foundations**
+### Phase 1 — Foundations
 
-Set up a professional .NET development environment and built the core C# fundamentals every backend service in this program is built on — types, OOP, collections, and LINQ — then closed with a real Git/GitHub feature-branch workflow.
+#### Week 1 — C# Fundamentals & Git
+**40 hours · Phase 1 · Foundations**
 
 | Day | Topic |
 |---|---|
 | [Day 1](Week1-Onboarding-Csharp-Git/Day1-EnvironmentSetup/README.md) | Environment Setup & .NET CLI |
 | [Day 2](Week1-Onboarding-Csharp-Git/Day2-TypesControlFlow/README.md) | Types, Variables & Control Flow |
 | [Day 3](Week1-Onboarding-Csharp-Git/Day3-OOP/README.md) | Object-Oriented Programming |
-| [Day 4](Week1-Onboarding-Csharp-Git/Day4-CollectionsLinq/README.md) | Collections & LINQ Basics |
+| [Day 4](Week1-Onboarding-Csharp-Git/Day4-CollectionsLinq/README.md) | Collections & LINQ |
 | [Day 5](Week1-Onboarding-Csharp-Git/Day5-GitGithub/README.md) | Git & GitHub Workflow |
 
-**Full summary:** [Week1-Onboarding-Csharp-Git/README.md](Week1-Onboarding-Csharp-Git/README.md)
-**Pull Request:** https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/pull/1
+[Week 1 Summary](Week1-Onboarding-Csharp-Git/README.md) · [PR #1](https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/pull/1)
 
 ---
 
-## Week 2 — Advanced C# & ASP.NET Core Foundations
-
-**Phase 1 → 2 · 40 hours · 5 training days · ASP.NET Core Foundations**
-
-Extended C# with generics, deeper LINQ, and a more rigorous async/await model, then built a first ASP.NET Core Web API — routing, the middleware pipeline, and dependency injection.
+#### Week 2 — Advanced C# & ASP.NET Core
+**40 hours · Phase 1→2 · ASP.NET Core Foundations**
 
 | Day | Topic |
 |---|---|
@@ -117,10 +84,89 @@ Extended C# with generics, deeper LINQ, and a more rigorous async/await model, t
 | [Day 4](Week2-AdvancedCsharp-AspNetCore/Day4-AspNetCoreSetup/README.md) | ASP.NET Core Setup & Routing |
 | [Day 5](Week2-AdvancedCsharp-AspNetCore/Day5-MiddlewareDI/README.md) | Middleware & Dependency Injection |
 
-**Full summary:** [Week2-AdvancedCsharp-AspNetCore/README.md](Week2-AdvancedCsharp-AspNetCore/README.md)
+[Week 2 Summary](Week2-AdvancedCsharp-AspNetCore/README.md)
 
 ---
 
-## Upcoming Weeks
+### Phase 3 — Capstone Project
 
-This section will be updated as new weeks are added, each linked from here the same way.
+#### Week 6 — Sprint 1: Core API
+**40 hours · Sprint 1 · CRUD, EF Core, Validation**
+
+Built the API foundation: 5 controllers, EF Core with SQL Server, FluentValidation,
+global exception handling, pagination, and the cardiac risk evaluation engine.
+
+[Sprint 1 Documentation](Cardiac-Monitoring-System/Week6-Sprint1-CoreApi/) · [PR](https://github.com/ShahdOmari/Shahd-Omari----BinX-Backend-Internship-/pulls)
+
+---
+
+#### Week 7 — Sprint 2: Identity & RBAC
+**40 hours · Sprint 2 · Authentication & Authorization**
+
+Wired ASP.NET Core Identity, issued JWTs with domain-specific claims (staffProfileId),
+enforced role-based access across every endpoint (Nurse/Doctor/Auditor/Admin),
+added ownership checks on VitalSigns, and built AuditLoggingMiddleware.
+
+[Sprint 2 Documentation](Week7-Sprint2-Identity-RoleBasedAuthorization/)
+
+---
+
+#### Week 8 — Sprint 3: Performance & Caching
+**40 hours · Sprint 3 · Query Optimization · Redis · Indexes**
+
+| Change | Before | After |
+|---|---|---|
+| GetCriticalPatients rows | 300 (full table load) | 7 (correlated subquery) |
+| GET /Patients cache hit | ~45ms | 3ms |
+| VitalSigns/critical warm | table scan | index seek · 50ms |
+
+Three composite indexes added. Redis cache-aside with explicit invalidation.
+EF Core query logging confirmed every fix with real SQL output.
+
+[Sprint 3 Documentation](Week8-Sprint3-Performance-Caching/)
+
+---
+
+#### Week 9 — Sprint 4: Testing, Documentation & Deployment
+**40 hours · Sprint 4 · Quality & Delivery**
+
+- **34/34 tests passing** — 8 new tests closed coverage gaps (Auth errors, RBAC, ownership)
+- **Swagger enriched** — XML doc comments, example requests, response codes on all endpoints
+- **GitHub Actions CI** — build + test on every push; red-green demo confirmed
+- **Railway deployment** — live API with health check, production secrets via Railway Variables
+
+[Sprint 4 Documentation](Week9-Sprint4-Testing-Documentation/)
+
+---
+
+## CI/CD Pipeline
+BinX-Backend-Internship/
+├── .github/workflows/ci.yml ← GitHub Actions CI/CD
+├── Dockerfile ← multi-stage build for Railway
+├── railway.json ← Railway deployment config
+├── README.md ← this file
+│
+├── Week1-Onboarding-Csharp-Git/
+├── Week2-AdvancedCsharp-AspNetCore/
+│
+├── Week7-Sprint2-Identity-RoleBasedAuthorization/
+├── Week8-Sprint3-Performance-Caching/
+├── Week9-Sprint4-Testing-Documentation/
+│
+└── Cardiac-Monitoring-System/ ← capstone project (all runnable code)
+├── src/CardiacMonitoring.Api/
+└── tests/CardiacMonitoring.Tests/
+
+---
+
+## Git Workflow
+
+```bash
+git checkout -b feature/weekX-dayY-topic
+git commit -m "descriptive message"
+git push -u origin feature/weekX-dayY-topic
+# open Pull Request → review → merge
+```
+
+Every sprint lives on its own branch and merges to main via PR.
+The CI pipeline runs on every PR and every push to main.
